@@ -1,12 +1,70 @@
 import { useEffect, useMemo, useRef } from 'react'
 import { useFrame } from '@react-three/fiber'
 import * as THREE from 'three'
+import type { OemDialect } from '../../engine/dialects/types'
 import { DEG2RAD } from '../../engine/kinematics/math3d'
 import { OMNI_ROBOT_SPEC } from '../../engine/kinematics/types'
 import { tickSimulation } from '../../engine/runtime/simulationLoop'
 import { robotRuntime, useRobotStore } from '../../engine/store/robotStore'
 
 const MM_TO_M = 0.001
+
+interface OemLivery {
+  /** Primary cast arm body color (upper arm, forearm, J1 turret) */
+  primaryBody: string
+  /** Base pedestal, counterweight, wrist housing */
+  secondaryCast: string
+  /** Rib spine, end-caps, accent trim */
+  accentTrim: string
+  /** Machined joint rings & servo collars */
+  jointRing: string
+  bodyMetalness: number
+  bodyRoughness: number
+}
+
+/** Authentic high-contrast factory liveries mapped to each industrial robot OEM */
+const OEM_LIVERIES: Record<OemDialect, OemLivery> = {
+  FANUC: {
+    primaryBody: '#F5C400', // Iconic FANUC Safety Yellow
+    secondaryCast: '#232832', // Matte graphite base & counterweight
+    accentTrim: '#1A1E26', // Black industrial trim spine
+    jointRing: '#94A3B8', // Machined steel joint rings
+    bodyMetalness: 0.25,
+    bodyRoughness: 0.34,
+  },
+  ABB: {
+    primaryBody: '#E2E8F0', // Iconic ABB Graphite White
+    secondaryCast: '#334155', // Dark industrial slate base
+    accentTrim: '#EF4444', // Signature ABB Red spine/cap accents
+    jointRing: '#64748B',
+    bodyMetalness: 0.28,
+    bodyRoughness: 0.32,
+  },
+  KUKA: {
+    primaryBody: '#FF6B00', // Iconic KUKA Cybertech Orange
+    secondaryCast: '#1F242D', // Matte KUKA black base & wrist
+    accentTrim: '#171A21', // Stealth black rib
+    jointRing: '#94A3B8',
+    bodyMetalness: 0.26,
+    bodyRoughness: 0.34,
+  },
+  YASKAWA: {
+    primaryBody: '#2979FF', // Iconic Motoman Blue
+    secondaryCast: '#232B38', // Deep navy-slate pedestal
+    accentTrim: '#DCE6F2', // Silver-white Motoman trim
+    jointRing: '#A8B5C8',
+    bodyMetalness: 0.34,
+    bodyRoughness: 0.3,
+  },
+  UR: {
+    primaryBody: '#DDE5EF', // Brushed anodized aluminum links
+    secondaryCast: '#3B4556', // Machined dark aluminum base
+    accentTrim: '#00B8D9', // Signature UR Blue-Cyan joint caps & trim
+    jointRing: '#00B8D9', // Signature UR Blue joint caps
+    bodyMetalness: 0.52,
+    bodyRoughness: 0.26,
+  },
+}
 
 /** Crisp 3D RGB Coordinate Triad (X=Red, Y=Green, Z=Blue) */
 export function CoordinateTriad3D({
@@ -70,8 +128,8 @@ export function CoordinateTriad3D({
 
 /**
  * Articulated 6-DOF Industrial Manipulator (OMNI-R20iD/25 class).
- * Operates in Z-up meters inside parent workcell transform.
- * Updates all 6 joint transforms strictly inside useFrame() with zero React re-renders.
+ * Dynamically adopts authentic OEM factory colors matching the active dialect
+ * (FANUC Yellow, ABB White/Red, KUKA Orange, Yaskawa Blue, UR Silver/Cyan).
  */
 export function RobotArm3D() {
   const j1Ref = useRef<THREE.Group>(null)
@@ -85,6 +143,7 @@ export function RobotArm3D() {
   const statusRingMatRef = useRef<THREE.MeshStandardMaterial>(null)
   const wristRingMatRef = useRef<THREE.MeshStandardMaterial>(null)
 
+  const dialect = useRobotStore((s) => s.dialect)
   const tool = useRobotStore((s) => s.tool)
   const scenarioId = useRobotStore((s) => s.scenarioId)
   const coordinateFrame = useRobotStore((s) => s.coordinateFrame)
@@ -97,40 +156,41 @@ export function RobotArm3D() {
   const d4 = OMNI_ROBOT_SPEC.d4 * MM_TO_M
   const d6 = OMNI_ROBOT_SPEC.d6 * MM_TO_M
 
-  // Shared industrial PBR materials (disposed cleanly on unmount)
+  // Shared industrial PBR materials keyed by active OEM livery (disposed cleanly on brand switch or unmount)
   const mats = useMemo(() => {
-    const bodySlate = new THREE.MeshStandardMaterial({
-      color: '#252B36',
-      metalness: 0.62,
-      roughness: 0.38,
+    const livery = OEM_LIVERIES[dialect]
+    const bodyPaint = new THREE.MeshStandardMaterial({
+      color: livery.primaryBody,
+      metalness: livery.bodyMetalness,
+      roughness: livery.bodyRoughness,
     })
     const darkCast = new THREE.MeshStandardMaterial({
-      color: '#171B22',
-      metalness: 0.55,
-      roughness: 0.52,
+      color: livery.secondaryCast,
+      metalness: 0.48,
+      roughness: 0.45,
     })
     const jointRing = new THREE.MeshStandardMaterial({
-      color: '#4E586B',
-      metalness: 0.82,
-      roughness: 0.24,
+      color: livery.jointRing,
+      metalness: 0.65,
+      roughness: 0.28,
     })
     const accentTrim = new THREE.MeshStandardMaterial({
-      color: '#384152',
-      metalness: 0.72,
-      roughness: 0.3,
+      color: livery.accentTrim,
+      metalness: 0.42,
+      roughness: 0.36,
     })
     const copper = new THREE.MeshStandardMaterial({
-      color: '#D97736',
-      metalness: 0.88,
-      roughness: 0.22,
+      color: '#E5853E',
+      metalness: 0.85,
+      roughness: 0.2,
     })
     const chrome = new THREE.MeshStandardMaterial({
-      color: '#C2CCD9',
-      metalness: 0.9,
-      roughness: 0.16,
+      color: '#DCE4EE',
+      metalness: 0.85,
+      roughness: 0.18,
     })
-    return { bodySlate, darkCast, jointRing, accentTrim, copper, chrome }
-  }, [])
+    return { bodyPaint, darkCast, jointRing, accentTrim, copper, chrome }
+  }, [dialect])
 
   useEffect(() => {
     return () => {
@@ -139,7 +199,6 @@ export function RobotArm3D() {
   }, [mats])
 
   useFrame((state, delta) => {
-    // Advance deterministic 60Hz simulation engine
     tickSimulation(delta)
 
     const [q1, q2, q3, q4, q5, q6] = robotRuntime.joints
@@ -150,13 +209,11 @@ export function RobotArm3D() {
     if (j5Ref.current) j5Ref.current.rotation.y = q5 * DEG2RAD
     if (j6Ref.current) j6Ref.current.rotation.x = q6 * DEG2RAD
 
-    // Animate parallel gripper jaws
     const openFrac = robotRuntime.cellObjects.gripperOpenFraction
     const jawOffset = 0.016 + openFrac * 0.028
     if (jawLeftRef.current) jawLeftRef.current.position.y = jawOffset
     if (jawRightRef.current) jawRightRef.current.position.y = -jawOffset
 
-    // Update emissive status LED collar without React re-renders
     const st = useRobotStore.getState()
     const pulse = 0.75 + 0.35 * Math.sin(state.clock.elapsedTime * 6)
 
@@ -180,7 +237,6 @@ export function RobotArm3D() {
       }
     }
 
-    // Highlight J5 wrist ring in amber/red when approaching wrist singularity!
     if (wristRingMatRef.current) {
       if (robotRuntime.singularity.wristCritical) {
         wristRingMatRef.current.color.set('#FF1744')
@@ -193,12 +249,11 @@ export function RobotArm3D() {
       } else {
         wristRingMatRef.current.color.set('#00E5FF')
         wristRingMatRef.current.emissive.set('#00E5FF')
-        wristRingMatRef.current.emissiveIntensity = 0.25
+        wristRingMatRef.current.emissiveIntensity = 0.35
       }
     }
   })
 
-  // Active UTOOL TCP position in flange coordinates (meters)
   const tcpOffsetM: [number, number, number] = [tool.x * MM_TO_M, tool.y * MM_TO_M, tool.z * MM_TO_M]
   const isAngledTorch = scenarioId === 'scenario1'
 
@@ -208,7 +263,7 @@ export function RobotArm3D() {
       <mesh position={[0, 0, 0.025]} rotation={[Math.PI / 2, 0, 0]} castShadow receiveShadow material={mats.darkCast}>
         <cylinderGeometry args={[0.27, 0.3, 0.05, 24]} />
       </mesh>
-      <mesh position={[0, 0, 0.14]} rotation={[Math.PI / 2, 0, 0]} castShadow receiveShadow material={mats.bodySlate}>
+      <mesh position={[0, 0, 0.14]} rotation={[Math.PI / 2, 0, 0]} castShadow receiveShadow material={mats.darkCast}>
         <cylinderGeometry args={[0.19, 0.23, 0.22, 24]} />
       </mesh>
 
@@ -223,12 +278,12 @@ export function RobotArm3D() {
 
       {/* J1 Waist Turret (Rotates about +Z) */}
       <group ref={j1Ref}>
-        <mesh position={[0, 0, 0.34]} rotation={[Math.PI / 2, 0, 0]} castShadow receiveShadow material={mats.bodySlate}>
+        <mesh position={[0, 0, 0.34]} rotation={[Math.PI / 2, 0, 0]} castShadow receiveShadow material={mats.bodyPaint}>
           <cylinderGeometry args={[0.175, 0.185, 0.2, 24]} />
         </mesh>
         {/* Emissive Industrial Status LED Collar */}
         <mesh position={[0, 0, 0.255]} rotation={[Math.PI / 2, 0, 0]}>
-          <cylinderGeometry args={[0.188, 0.188, 0.022, 28]} />
+          <cylinderGeometry args={[0.19, 0.19, 0.024, 28]} />
           <meshStandardMaterial
             ref={statusRingMatRef}
             color="#00E676"
@@ -238,31 +293,29 @@ export function RobotArm3D() {
           />
         </mesh>
         {/* Shoulder Bracket Offset to (a1, 0, d1) */}
-        <mesh position={[a1 * 0.55, 0, d1 - 0.08]} castShadow receiveShadow material={mats.darkCast}>
+        <mesh position={[a1 * 0.55, 0, d1 - 0.08]} castShadow receiveShadow material={mats.bodyPaint}>
           <boxGeometry args={[a1 + 0.16, 0.26, 0.22]} />
         </mesh>
 
         {/* J2 Shoulder Axis at (a1, 0, d1) — Rotates about +Y */}
         <group ref={j2Ref} position={[a1, 0, d1]}>
-          {/* Shoulder Servo Drum */}
           <mesh castShadow material={mats.jointRing}>
             <cylinderGeometry args={[0.135, 0.135, 0.31, 24]} />
           </mesh>
-          {/* Twin Side Caps */}
-          <mesh position={[0, 0.16, 0]} material={mats.darkCast}>
-            <cylinderGeometry args={[0.095, 0.095, 0.025, 20]} />
+          <mesh position={[0, 0.16, 0]} material={mats.accentTrim}>
+            <cylinderGeometry args={[0.095, 0.095, 0.028, 20]} />
           </mesh>
-          <mesh position={[0, -0.16, 0]} material={mats.darkCast}>
-            <cylinderGeometry args={[0.095, 0.095, 0.025, 20]} />
+          <mesh position={[0, -0.16, 0]} material={mats.accentTrim}>
+            <cylinderGeometry args={[0.095, 0.095, 0.028, 20]} />
           </mesh>
 
           {/* Upper Arm Link (J2 -> J3 along +Z length a2) */}
-          <mesh position={[0, 0, a2 * 0.5]} castShadow receiveShadow material={mats.bodySlate}>
+          <mesh position={[0, 0, a2 * 0.5]} castShadow receiveShadow material={mats.bodyPaint}>
             <boxGeometry args={[0.165, 0.185, a2 - 0.04]} />
           </mesh>
-          {/* Machined Spine Rib */}
+          {/* Contrast Spine Rib */}
           <mesh position={[-0.088, 0, a2 * 0.5]} material={mats.accentTrim}>
-            <boxGeometry args={[0.026, 0.09, a2 * 0.72]} />
+            <boxGeometry args={[0.026, 0.095, a2 * 0.74]} />
           </mesh>
 
           {/* J3 Elbow Axis at (0, 0, a2) — Rotates about +Y */}
@@ -275,40 +328,37 @@ export function RobotArm3D() {
               <boxGeometry args={[0.26, 0.19, 0.21]} />
             </mesh>
             {/* Elbow-to-Forearm Offset Riser */}
-            <mesh position={[0.14, 0, a3 * 0.85]} castShadow material={mats.bodySlate}>
+            <mesh position={[0.14, 0, a3 * 0.85]} castShadow material={mats.bodyPaint}>
               <boxGeometry args={[0.36, 0.165, 0.165]} />
             </mesh>
 
             {/* J4 Forearm Roll at (d4*0.45, 0, a3) — Rotates about +X */}
             <group ref={j4Ref} position={[d4 * 0.45, 0, a3]}>
-              {/* J4 Roll Collar */}
               <mesh rotation={[0, 0, Math.PI / 2]} castShadow material={mats.jointRing}>
                 <cylinderGeometry args={[0.088, 0.088, 0.06, 20]} />
               </mesh>
-              {/* Tapered Forearm Tube to J5 Wrist Center */}
-              <mesh position={[d4 * 0.275, 0, 0]} rotation={[0, 0, Math.PI / 2]} castShadow material={mats.bodySlate}>
+              <mesh position={[d4 * 0.275, 0, 0]} rotation={[0, 0, Math.PI / 2]} castShadow material={mats.bodyPaint}>
                 <cylinderGeometry args={[0.066, 0.082, d4 * 0.52, 20]} />
               </mesh>
 
               {/* J5 Spherical Wrist Pitch at (d4*0.55, 0, 0) — Rotates about +Y */}
               <group ref={j5Ref} position={[d4 * 0.55, 0, 0]}>
-                {/* Spherical Wrist Clevis & Singularity Status Ring */}
-                <mesh castShadow material={mats.jointRing}>
+                <mesh castShadow material={mats.darkCast}>
                   <cylinderGeometry args={[0.068, 0.068, 0.145, 20]} />
                 </mesh>
                 <mesh rotation={[Math.PI / 2, 0, 0]}>
-                  <torusGeometry args={[0.074, 0.008, 10, 24]} />
+                  <torusGeometry args={[0.075, 0.0085, 10, 24]} />
                   <meshStandardMaterial
                     ref={wristRingMatRef}
                     color="#00E5FF"
                     emissive="#00E5FF"
-                    emissiveIntensity={0.25}
+                    emissiveIntensity={0.35}
                   />
                 </mesh>
 
                 {/* J6 Flange Roll — Rotates about +X */}
                 <group ref={j6Ref}>
-                  <mesh position={[d6 * 0.5, 0, 0]} rotation={[0, 0, Math.PI / 2]} castShadow material={mats.darkCast}>
+                  <mesh position={[d6 * 0.5, 0, 0]} rotation={[0, 0, Math.PI / 2]} castShadow material={mats.jointRing}>
                     <cylinderGeometry args={[0.052, 0.058, d6 * 0.72, 18]} />
                   </mesh>
 
@@ -321,35 +371,28 @@ export function RobotArm3D() {
                     {/* Swappable End-Effector */}
                     {tool.endEffectorType === 'torch' ? (
                       <group>
-                        {/* Mounting Collar */}
                         <mesh position={[0, 0, 0.04]} rotation={[Math.PI / 2, 0, 0]} material={mats.darkCast}>
                           <cylinderGeometry args={[0.036, 0.044, 0.065, 16]} />
                         </mesh>
                         {isAngledTorch ? (
-                          /* Scenario 1: Angled MIG Welding Torch with true physical tip at [0.070, 0, 0.230] m */
                           <group>
-                            {/* Straight torch barrel up to bend */}
-                            <mesh position={[0, 0, 0.095]} rotation={[Math.PI / 2, 0, 0]} material={mats.accentTrim}>
+                            <mesh position={[0, 0, 0.095]} rotation={[Math.PI / 2, 0, 0]} material={mats.chrome}>
                               <cylinderGeometry args={[0.016, 0.02, 0.075, 14]} />
                             </mesh>
-                            {/* Angled gooseneck from (0,0,0.12) -> (0.070, 0, 0.230): dx=0.07, dz=0.11, len=0.1304, angle=atan2(0.07,0.11)=32.5° */}
                             <group position={[0.035, 0, 0.175]} rotation={[0, Math.atan2(0.07, 0.11), 0]}>
                               <mesh rotation={[Math.PI / 2, 0, 0]} material={mats.chrome}>
                                 <cylinderGeometry args={[0.011, 0.014, 0.085, 14]} />
                               </mesh>
-                              {/* Copper Gas Nozzle & Tip */}
                               <mesh position={[0, 0, 0.052]} rotation={[Math.PI / 2, 0, 0]} material={mats.copper}>
                                 <cylinderGeometry args={[0.005, 0.013, 0.036, 14]} />
                               </mesh>
                             </group>
-                            {/* Physical Wire Tip Marker */}
                             <mesh position={[0.07, 0, 0.23]}>
-                              <sphereGeometry args={[0.0045, 10, 10]} />
-                              <meshStandardMaterial color="#FFD600" emissive="#FFD600" emissiveIntensity={1.1} />
+                              <sphereGeometry args={[0.005, 10, 10]} />
+                              <meshStandardMaterial color="#FFD600" emissive="#FFD600" emissiveIntensity={1.2} />
                             </mesh>
                           </group>
                         ) : (
-                          /* Scenario 3: Inline Process Torch tip at [0, 0, 0.185] m */
                           <group>
                             <mesh position={[0, 0, 0.11]} rotation={[Math.PI / 2, 0, 0]} material={mats.chrome}>
                               <cylinderGeometry args={[0.014, 0.022, 0.1, 14]} />
@@ -361,25 +404,19 @@ export function RobotArm3D() {
                         )}
                       </group>
                     ) : (
-                      /* Pneumatic Parallel 2-Finger Industrial Gripper (Scenario 2 & 4, TCP at z=195mm) */
                       <group>
-                        {/* Pneumatic Actuator Body */}
-                        <mesh position={[0, 0, 0.048]} castShadow material={mats.accentTrim}>
+                        <mesh position={[0, 0, 0.048]} castShadow material={mats.darkCast}>
                           <boxGeometry args={[0.078, 0.125, 0.078]} />
                         </mesh>
-                        {/* Mounting Adapter */}
-                        <mesh position={[0, 0, 0.012]} rotation={[Math.PI / 2, 0, 0]} material={mats.darkCast}>
+                        <mesh position={[0, 0, 0.012]} rotation={[Math.PI / 2, 0, 0]} material={mats.jointRing}>
                           <cylinderGeometry args={[0.048, 0.052, 0.024, 16]} />
                         </mesh>
-                        {/* Guide Rail */}
                         <mesh position={[0, 0, 0.095]} material={mats.chrome}>
                           <boxGeometry args={[0.042, 0.128, 0.018]} />
                         </mesh>
-                        {/* Animated Left Finger Jaw */}
                         <mesh ref={jawLeftRef} position={[0, 0.04, 0.148]} castShadow material={mats.chrome}>
                           <boxGeometry args={[0.028, 0.018, 0.096]} />
                         </mesh>
-                        {/* Animated Right Finger Jaw */}
                         <mesh ref={jawRightRef} position={[0, -0.04, 0.148]} castShadow material={mats.chrome}>
                           <boxGeometry args={[0.028, 0.018, 0.096]} />
                         </mesh>

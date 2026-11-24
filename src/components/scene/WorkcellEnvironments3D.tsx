@@ -23,15 +23,15 @@ function BaseWorkcellFloor() {
 
   return (
     <group>
-      {/* Dead-front industrial slate-black floor slab */}
+      {/* Dead-front industrial slate floor slab with crisp contrast */}
       <mesh position={[0.25, 0, -0.015]} receiveShadow>
         <boxGeometry args={[4.4, 4.2, 0.03]} />
-        <meshStandardMaterial color="#0D1016" metalness={0.25} roughness={0.85} />
+        <meshStandardMaterial color="#121721" metalness={0.22} roughness={0.82} />
       </mesh>
 
       {/* Precision Floor Grid (Rotated to Z=0 plane) */}
       <gridHelper
-        args={[4.2, 21, '#2A303C', '#191E27']}
+        args={[4.2, 21, '#3A475C', '#222B3A']}
         position={[0.25, 0, 0.002]}
         rotation={[Math.PI / 2, 0, 0]}
       />

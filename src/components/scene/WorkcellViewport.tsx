@@ -15,6 +15,7 @@ import {
 } from 'lucide-react'
 import * as THREE from 'three'
 import type { OrbitControls as OrbitControlsImpl } from 'three-stdlib'
+import { OEM_DIALECTS } from '../../engine/dialects/types'
 import { useRobotStore } from '../../engine/store/robotStore'
 import { SCENARIOS } from '../../engine/scenarios/definitions'
 import { PathVisuals3D } from './PathVisuals3D'
@@ -80,6 +81,8 @@ export function WorkcellViewport({
   const [camPreset, setCamPreset] = useState<CameraPreset>('ISO')
   const [presetTrigger, setPresetTrigger] = useState(0)
 
+  const dialect = useRobotStore((s) => s.dialect)
+  const setDialect = useRobotStore((s) => s.setDialect)
   const scenarioId = useRobotStore((s) => s.scenarioId)
   const coordinateFrame = useRobotStore((s) => s.coordinateFrame)
   const controllerMode = useRobotStore((s) => s.controllerMode)
@@ -107,8 +110,16 @@ export function WorkcellViewport({
     setPresetTrigger((n) => n + 1)
   }
 
+  const cycleDialect = () => {
+    const idx = OEM_DIALECTS.findIndex((d) => d.id === dialect)
+    const next = OEM_DIALECTS[(idx + 1) % OEM_DIALECTS.length]
+    setDialect(next.id)
+  }
+
+  const activeDialectMeta = OEM_DIALECTS.find((d) => d.id === dialect) ?? OEM_DIALECTS[0]
+
   return (
-    <div className="relative h-full w-full overflow-hidden bg-[#0A0C10]">
+    <div className="relative h-full w-full overflow-hidden bg-[#0E121A]">
       {/* 3D WebGL Canvas (capped DPR 1.5 for crisp 60FPS on mobile GPUs) */}
       <Canvas
         shadows
@@ -116,15 +127,16 @@ export function WorkcellViewport({
         camera={{ position: CAMERA_PRESETS.ISO.pos, fov: 44, near: 0.05, far: 25 }}
         gl={{ antialias: true, powerPreference: 'high-performance' }}
       >
-        <color attach="background" args={['#0A0C10']} />
-        <fog attach="fog" args={['#0A0C10', 6.5, 14]} />
+        <color attach="background" args={['#0E121A']} />
+        <fog attach="fog" args={['#0E121A', 7.5, 16]} />
 
-        <ambientLight intensity={0.48} color="#CBD5E1" />
-        <hemisphereLight args={['#94A3B8', '#0F131A', 0.55]} />
+        {/* High-Contrast 3-Point Industrial Studio Lighting */}
+        <ambientLight intensity={0.72} color="#E2E8F0" />
+        <hemisphereLight args={['#E2E8F0', '#1E2634', 0.85]} />
         <directionalLight
-          position={[3.5, 5.2, 3.2]}
-          intensity={1.55}
-          color="#F8FAFC"
+          position={[3.6, 5.4, 3.4]}
+          intensity={1.95}
+          color="#FFFFFF"
           castShadow
           shadow-mapSize={[1024, 1024]}
           shadow-camera-near={0.5}
@@ -134,7 +146,9 @@ export function WorkcellViewport({
           shadow-camera-top={2.5}
           shadow-camera-bottom={-2.5}
         />
-        <pointLight position={[-1.8, 2.2, -1.5]} intensity={0.55} color="#00E5FF" distance={7} />
+        {/* Cool Back-Left Rim Light to separate robot silhouette from dark backdrop */}
+        <directionalLight position={[-3.2, 2.8, -2.6]} intensity={0.95} color="#BAE6FD" />
+        <pointLight position={[1.2, 2.4, -1.6]} intensity={0.65} color="#F8FAFC" distance={8} />
 
         {/* Entire Robotics Workcell rotated -90° around X so Industrial Z-Up maps cleanly to Three Y-Up */}
         <group rotation={[-Math.PI / 2, 0, 0]}>
@@ -352,10 +366,25 @@ export function WorkcellViewport({
         </div>
       </div>
 
-      {/* Bottom-Right Orbit Hint */}
-      <div className="pointer-events-none absolute bottom-3 right-3 hidden items-center gap-1.5 rounded border border-[#2A303C]/80 bg-[#14171D]/75 px-2.5 py-1 font-mono text-[10px] text-[#64748B] xl:flex">
-        <Eye className="h-3 w-3" />
-        LMB Orbit · RMB Pan · Scroll Zoom
+      {/* Bottom-Right OEM Brand Livery Switcher + Desktop Orbit Hint */}
+      <div className="absolute bottom-2 right-2 flex items-center gap-1.5 sm:bottom-3 sm:right-3">
+        <button
+          type="button"
+          onClick={cycleDialect}
+          title="Tap to switch Robot Brand Color & OEM Dialect (FANUC / ABB / KUKA / Yaskawa / UR)"
+          className="flex items-center gap-1.5 rounded-md border border-[#353E4F] bg-[#14171D]/92 px-2.5 py-1 font-mono text-[10px] font-bold text-[#F1F5F9] shadow-sm backdrop-blur-sm transition-colors hover:border-[#00E5FF]/60"
+        >
+          <span
+            className="h-2.5 w-2.5 rounded-full ring-1 ring-white/30"
+            style={{ backgroundColor: activeDialectMeta.accentColor }}
+          />
+          <span>{activeDialectMeta.name}</span>
+        </button>
+
+        <div className="pointer-events-none hidden items-center gap-1.5 rounded border border-[#2A303C]/80 bg-[#14171D]/75 px-2.5 py-1 font-mono text-[10px] text-[#64748B] xl:flex">
+          <Eye className="h-3 w-3" />
+          LMB Orbit · RMB Pan · Scroll Zoom
+        </div>
       </div>
     </div>
   )
