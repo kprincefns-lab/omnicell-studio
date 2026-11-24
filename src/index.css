@@ -1,0 +1,126 @@
+@import "tailwindcss";
+
+@theme {
+  --font-sans: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+
+  --color-hmi-void: #0A0C10;
+  --color-hmi-panel: #1C1F26;
+  --color-hmi-surface: #14171D;
+  --color-hmi-elevated: #232833;
+  --color-hmi-border: #2A303C;
+  --color-hmi-border-strong: #394150;
+
+  --color-status-ready: #00E676;
+  --color-status-active: #00E5FF;
+  --color-status-warn: #FFB300;
+  --color-status-fault: #FF1744;
+
+  --color-oem-fanuc: #FFD600;
+  --color-oem-abb: #FF3B30;
+  --color-oem-kuka: #FF6D00;
+  --color-oem-yaskawa: #2979FF;
+  --color-oem-ur: #00E5FF;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+  width: 100%;
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+  background-color: #0A0C10;
+  color: #E6EDF3;
+  font-family: var(--font-sans);
+}
+
+/* Precision Industrial Scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: #101318;
+}
+::-webkit-scrollbar-thumb {
+  background: #2A303C;
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #3D4657;
+}
+
+/* Industrial HMI Panel Surface */
+.hmi-panel {
+  background: linear-gradient(180deg, #1E222A 0%, #191C23 100%);
+  border: 1px solid #2A303C;
+}
+
+.hmi-recessed {
+  background-color: #101318;
+  border: 1px solid #242A35;
+  box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.55);
+}
+
+.hmi-key {
+  background: linear-gradient(180deg, #282E3B 0%, #1F242E 100%);
+  border: 1px solid #353D4D;
+  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.05) inset, 0 2px 4px rgba(0, 0, 0, 0.45);
+  transition: transform 80ms ease, background 120ms ease, border-color 120ms ease;
+}
+
+.hmi-key:hover:not(:disabled) {
+  background: linear-gradient(180deg, #313847 0%, #252B37 100%);
+  border-color: #485368;
+}
+
+.hmi-key:active:not(:disabled),
+.hmi-key-pressed {
+  transform: translateY(1px);
+  background: linear-gradient(180deg, #1A202B 0%, #232A38 100%);
+  border-color: #00E5FF;
+  box-shadow: 0 0 8px rgba(0, 229, 255, 0.25) inset;
+}
+
+.tabular-nums {
+  font-variant-numeric: tabular-nums;
+}
+
+.led-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 9999px;
+  display: inline-block;
+  flex-shrink: 0;
+}
+
+.led-green {
+  background-color: #00E676;
+  box-shadow: 0 0 6px rgba(0, 230, 118, 0.75);
+}
+
+.led-cyan {
+  background-color: #00E5FF;
+  box-shadow: 0 0 6px rgba(0, 229, 255, 0.75);
+}
+
+.led-amber {
+  background-color: #FFB300;
+  box-shadow: 0 0 6px rgba(255, 179, 0, 0.75);
+}
+
+.led-red {
+  background-color: #FF1744;
+  box-shadow: 0 0 8px rgba(255, 23, 68, 0.85);
+}
+
+.led-off {
+  background-color: #2A303C;
+  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.7);
+}
