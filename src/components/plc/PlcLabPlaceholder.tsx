@@ -48,8 +48,8 @@ export function PlcLabPlaceholder() {
   const setWorkspace = useRobotStore((s) => s.setWorkspace)
 
   return (
-    <div className="flex h-full flex-col overflow-y-auto bg-[#0D1016] p-5">
-      <div className="mx-auto flex w-full max-w-6xl flex-col gap-5">
+    <div className="safe-bottom flex h-full flex-col overflow-y-auto bg-[#0D1016] p-3 sm:p-5">
+      <div className="mx-auto flex w-full max-w-6xl flex-col gap-4 sm:gap-5">
         {/* Top Architecture Banner */}
         <div className="hmi-panel flex flex-wrap items-center justify-between gap-4 rounded-lg p-5">
           <div className="max-w-2xl">

@@ -2,14 +2,14 @@ import { useState } from 'react'
 import { Activity, ChevronDown, ChevronUp, Cpu, SlidersHorizontal } from 'lucide-react'
 import { useFieldbusStore } from '../../engine/fieldbus/fieldbusStore'
 import { DI_DEFINITIONS, DO_DEFINITIONS } from '../../engine/fieldbus/types'
+import { useRobotStore } from '../../engine/store/robotStore'
 
 /**
- * Persistent Live Virtual Fieldbus I/O Strip shared between Robotics Lab & Phase 3 PLC Lab.
- * Shows primary DI[1..8] / DO[1..8] LEDs + VR[1] offset + expandable Manual Cell / PLC Override Drawer.
+ * Full touch-friendly Virtual Fieldbus panel used inside:
+ * 1) The dedicated mobile bottom "I/O" tab
+ * 2) The desktop expandable PLC I/O Override drawer
  */
-export function FieldbusStrip() {
-  const [drawerOpen, setDrawerOpen] = useState(false)
-
+export function FieldbusControlDeck({ compact = false }: { compact?: boolean }) {
   const di = useFieldbusStore((s) => s.di)
   const doBank = useFieldbusStore((s) => s.do)
   const vr = useFieldbusStore((s) => s.vr)
@@ -18,16 +18,214 @@ export function FieldbusStrip() {
   const toggleDI = useFieldbusStore((s) => s.toggleDI)
   const eventLog = useFieldbusStore((s) => s.eventLog)
 
+  const vr1 = vr[1]
+
+  return (
+    <div className={compact ? 'space-y-3' : 'flex h-full flex-col gap-3 overflow-y-auto p-3 pb-5'}>
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <div className="flex items-center gap-2">
+          <Cpu className="h-4 w-4 text-[#00E5FF]" />
+          <span className="font-mono text-xs font-semibold text-[#E6EDF3]">
+            VIRTUAL FIELDBUS I/O &amp; PLC OVERRIDE
+          </span>
+        </div>
+        <label className="flex cursor-pointer items-center gap-2 rounded border border-[#2A303C] bg-[#14171D] px-2.5 py-1.5 font-mono text-[11px] text-[#CBD5E1]">
+          <input
+            type="checkbox"
+            checked={autoPlcHandshake}
+            onChange={(e) => setAutoPlcHandshake(e.target.checked)}
+            className="h-4 w-4 accent-[#00E5FF]"
+          />
+          Auto PLC Handshake
+        </label>
+      </div>
+
+      {/* VR[1] Vision Register Banner */}
+      <div
+        className={`flex items-center justify-between rounded-md border px-3 py-2 font-mono text-[11px] tabular-nums ${
+          vr1.valid
+            ? 'border-[#00E5FF]/40 bg-[#00E5FF]/10 text-[#00E5FF]'
+            : 'border-[#252B36] bg-[#14171D] text-[#8B949E]'
+        }`}
+      >
+        <span className="font-bold">VISION REGISTER VR[1]</span>
+        {vr1.valid ? (
+          <span>
+            ΔX {vr1.x.toFixed(1)} · ΔY {vr1.y.toFixed(1)} · Rz {vr1.rz.toFixed(1)}°
+          </span>
+        ) : (
+          <span>IDLE</span>
+        )}
+      </div>
+
+      <div className={compact ? 'grid grid-cols-1 gap-3 lg:grid-cols-3' : 'flex flex-col gap-3'}>
+        {/* DI[1..16] Bank */}
+        <div className="hmi-recessed rounded-md p-2.5">
+          <div className="mb-2 font-mono text-[10px] font-bold text-[#00E5FF]">
+            DI[1..16] — INPUTS TO ROBOT (TAP TO FORCE)
+          </div>
+          <div className="grid grid-cols-2 gap-1.5">
+            {DI_DEFINITIONS.map((sig) => {
+              const on = di[sig.index]
+              return (
+                <button
+                  key={`full_di_${sig.index}`}
+                  type="button"
+                  onClick={() => toggleDI(sig.index)}
+                  className={`flex min-h-[38px] items-center justify-between rounded border px-2 py-1.5 text-left font-mono text-[10.5px] transition-colors ${
+                    on
+                      ? 'border-[#00E5FF]/45 bg-[#00E5FF]/12 text-[#E6EDF3]'
+                      : 'border-[#232833] bg-[#14171D] text-[#64748B] hover:border-[#394254]'
+                  }`}
+                >
+                  <span className="flex items-center gap-1.5 truncate">
+                    <span className={`led-dot ${on ? 'led-cyan' : 'led-off'}`} />
+                    <span className="truncate">
+                      [{sig.index}] {sig.shortLabel}
+                    </span>
+                  </span>
+                  <span className="ml-1 shrink-0 font-bold">{on ? '1' : '0'}</span>
+                </button>
+              )
+            })}
+          </div>
+        </div>
+
+        {/* DO[1..16] Bank */}
+        <div className="hmi-recessed rounded-md p-2.5">
+          <div className="mb-2 font-mono text-[10px] font-bold text-[#00E676]">
+            DO[1..16] — OUTPUTS FROM ROBOT TO PLC
+          </div>
+          <div className="grid grid-cols-2 gap-1.5">
+            {DO_DEFINITIONS.map((sig) => {
+              const on = doBank[sig.index]
+              return (
+                <div
+                  key={`full_do_${sig.index}`}
+                  className={`flex min-h-[34px] items-center justify-between rounded border px-2 py-1 font-mono text-[10.5px] ${
+                    on
+                      ? sig.index === 6
+                        ? 'border-[#FF1744]/50 bg-[#FF1744]/15 text-[#FCA5A5]'
+                        : 'border-[#00E676]/40 bg-[#00E676]/10 text-[#E6EDF3]'
+                      : 'border-[#232833] bg-[#14171D] text-[#64748B]'
+                  }`}
+                >
+                  <span className="flex items-center gap-1.5 truncate">
+                    <span
+                      className={`led-dot ${
+                        on ? (sig.index === 6 ? 'led-red' : 'led-green') : 'led-off'
+                      }`}
+                    />
+                    <span className="truncate">
+                      [{sig.index}] {sig.shortLabel}
+                    </span>
+                  </span>
+                  <span className="ml-1 shrink-0 font-bold">{on ? '1' : '0'}</span>
+                </div>
+              )
+            })}
+          </div>
+        </div>
+
+        {/* Live Bus Event Log */}
+        <div className="hmi-recessed flex flex-col rounded-md p-2.5">
+          <div className="mb-2 font-mono text-[10px] font-bold text-[#FFB300]">
+            FIELDBUS HANDSHAKE TRACE
+          </div>
+          <div className="max-h-44 flex-1 space-y-1 overflow-y-auto font-mono text-[10px]">
+            {eventLog.length === 0 ? (
+              <p className="text-[#64748B]">No signal transitions recorded yet.</p>
+            ) : (
+              eventLog.slice(0, 14).map((ev) => (
+                <div key={ev.id} className="flex items-center justify-between border-b border-[#1E222B] pb-0.5">
+                  <span className="text-[#64748B] tabular-nums">{ev.timestamp}</span>
+                  <span className="font-semibold text-[#E6EDF3]">{ev.channel}</span>
+                  <span
+                    className={
+                      ev.source === 'FAULT'
+                        ? 'text-[#FF1744]'
+                        : ev.source === 'VISION'
+                          ? 'text-[#00E5FF]'
+                          : 'text-[#00E676]'
+                    }
+                  >
+                    {ev.value}
+                  </span>
+                </div>
+              ))
+            )}
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+/**
+ * Persistent Live Virtual Fieldbus I/O Strip:
+ * - Desktop (lg+): Full DI[1..8] / DO[1..8] / VR[1] strip + expandable PLC Override Drawer
+ * - Mobile (< lg): Compact single-line status ticker that taps straight to the mobile I/O tab
+ */
+export function FieldbusStrip() {
+  const [drawerOpen, setDrawerOpen] = useState(false)
+
+  const di = useFieldbusStore((s) => s.di)
+  const doBank = useFieldbusStore((s) => s.do)
+  const vr = useFieldbusStore((s) => s.vr)
+  const toggleDI = useFieldbusStore((s) => s.toggleDI)
+  const setDockTab = useRobotStore((s) => s.setDockTab)
+  const setWorkspace = useRobotStore((s) => s.setWorkspace)
+
   const primaryDI = DI_DEFINITIONS.slice(0, 8)
   const primaryDO = DO_DEFINITIONS.slice(0, 8)
   const vr1 = vr[1]
 
   return (
     <div className="relative z-20 shrink-0 border-b border-[#2A303C] bg-[#12151B]">
-      {/* Compact Persistent LED Strip */}
-      <div className="flex flex-wrap items-center justify-between gap-2 px-3 py-1.5">
+      {/* Mobile Ultra-Compact Single-Line Ticker (< lg) */}
+      <div className="flex h-7 items-center justify-between gap-2 px-2.5 lg:hidden">
+        <div className="no-scrollbar flex items-center gap-2 overflow-x-auto font-mono text-[9.5px]">
+          <span className="flex shrink-0 items-center gap-1 font-bold text-[#94A3B8]">
+            <Activity className="h-3 w-3 text-[#00E5FF]" />
+            <span className={`led-dot ${di[16] ? 'led-cyan' : 'led-off'}`} />
+          </span>
+          <span className="flex shrink-0 items-center gap-1 text-[#CBD5E1]">
+            <span className={`led-dot ${di[6] ? 'led-green' : 'led-red'}`} />
+            FENCE
+          </span>
+          <span className="flex shrink-0 items-center gap-1 text-[#CBD5E1]">
+            <span className={`led-dot ${di[1] ? 'led-cyan' : 'led-off'}`} />
+            PART
+          </span>
+          <span className="flex shrink-0 items-center gap-1 text-[#CBD5E1]">
+            <span className={`led-dot ${di[2] ? 'led-cyan' : 'led-amber'}`} />
+            DOOR
+          </span>
+          <span className="flex shrink-0 items-center gap-1 text-[#CBD5E1]">
+            <span className={`led-dot ${doBank[1] ? 'led-green' : 'led-off'}`} />
+            GRIP
+          </span>
+          {vr1.valid && (
+            <span className="shrink-0 font-semibold text-[#00E5FF] tabular-nums">
+              VR1:{vr1.x.toFixed(0)},{vr1.y.toFixed(0)}
+            </span>
+          )}
+        </div>
+        <button
+          type="button"
+          onClick={() => {
+            setWorkspace('ROBOTICS')
+            setDockTab('IO')
+          }}
+          className="shrink-0 rounded border border-[#2A303C] bg-[#1C1F26] px-2 py-0.5 font-mono text-[9.5px] font-bold text-[#00E5FF]"
+        >
+          ALL I/O
+        </button>
+      </div>
+
+      {/* Desktop Full Persistent LED Strip (lg+) */}
+      <div className="hidden flex-wrap items-center justify-between gap-2 px-3 py-1.5 lg:flex">
         <div className="flex flex-wrap items-center gap-3">
-          {/* Bus Label */}
           <div className="flex items-center gap-1.5 font-mono text-[10px] font-semibold tracking-wider text-[#94A3B8]">
             <Activity className="h-3.5 w-3.5 text-[#00E5FF]" />
             <span>FIELDBUS</span>
@@ -37,7 +235,6 @@ export function FieldbusStrip() {
             />
           </div>
 
-          {/* DI[1..8] Clickable Input LEDs */}
           <div className="flex items-center gap-1">
             <span className="mr-1 font-mono text-[10px] font-bold text-[#64748B]">DI</span>
             {primaryDI.map((sig) => {
@@ -70,9 +267,8 @@ export function FieldbusStrip() {
             })}
           </div>
 
-          <div className="hidden h-4 w-px bg-[#2A303C] md:block" />
+          <div className="h-4 w-px bg-[#2A303C]" />
 
-          {/* DO[1..8] Read-Only Robot Output LEDs */}
           <div className="flex items-center gap-1">
             <span className="mr-1 font-mono text-[10px] font-bold text-[#64748B]">DO</span>
             {primaryDO.map((sig) => {
@@ -102,10 +298,9 @@ export function FieldbusStrip() {
           </div>
         </div>
 
-        {/* Right: VR[1] Vision Summary + Simulated PLC Override Toggle */}
         <div className="flex items-center gap-2">
           <div
-            className={`hidden items-center gap-1.5 rounded border px-2 py-0.5 font-mono text-[10px] tabular-nums sm:flex ${
+            className={`flex items-center gap-1.5 rounded border px-2 py-0.5 font-mono text-[10px] tabular-nums ${
               vr1.valid
                 ? 'border-[#00E5FF]/40 bg-[#00E5FF]/10 text-[#00E5FF]'
                 : 'border-[#252B36] bg-[#171B22] text-[#64748B]'
@@ -138,129 +333,10 @@ export function FieldbusStrip() {
         </div>
       </div>
 
-      {/* Expandable Manual Cell / Simulated PLC Override Drawer */}
+      {/* Desktop Expandable Manual Cell / Simulated PLC Override Drawer */}
       {drawerOpen && (
-        <div className="border-t border-[#2A303C] bg-[#151820] px-4 py-3 shadow-2xl">
-          <div className="mb-2.5 flex flex-wrap items-center justify-between gap-2">
-            <div className="flex items-center gap-2">
-              <Cpu className="h-4 w-4 text-[#00E5FF]" />
-              <span className="font-mono text-xs font-semibold text-[#E6EDF3]">
-                VIRTUAL FIELDBUS I/O MONITOR &amp; SIMULATED PLC OVERRIDE
-              </span>
-              <span className="rounded bg-[#232833] px-2 py-0.5 font-mono text-[10px] text-[#94A3B8]">
-                SHARED PHASE 3 PLC CONTRACT
-              </span>
-            </div>
-            <label className="flex cursor-pointer items-center gap-2 font-mono text-[11px] text-[#CBD5E1]">
-              <input
-                type="checkbox"
-                checked={autoPlcHandshake}
-                onChange={(e) => setAutoPlcHandshake(e.target.checked)}
-                className="accent-[#00E5FF]"
-              />
-              Auto-Simulate PLC Handshakes (Gripper Reeds &amp; CNC Door)
-            </label>
-          </div>
-
-          <div className="grid grid-cols-1 gap-3 lg:grid-cols-3">
-            {/* DI[1..16] Bank */}
-            <div className="hmi-recessed rounded-md p-2.5">
-              <div className="mb-2 flex items-center justify-between font-mono text-[10px] font-bold text-[#00E5FF]">
-                <span>DI[1..16] — INPUTS TO ROBOT (CLICK TO FORCE)</span>
-              </div>
-              <div className="grid grid-cols-2 gap-1">
-                {DI_DEFINITIONS.map((sig) => {
-                  const on = di[sig.index]
-                  return (
-                    <button
-                      key={`full_di_${sig.index}`}
-                      type="button"
-                      onClick={() => toggleDI(sig.index)}
-                      className={`flex items-center justify-between rounded border px-2 py-1 text-left font-mono text-[10px] transition-colors ${
-                        on
-                          ? 'border-[#00E5FF]/40 bg-[#00E5FF]/10 text-[#E6EDF3]'
-                          : 'border-[#232833] bg-[#14171D] text-[#64748B] hover:border-[#394254]'
-                      }`}
-                    >
-                      <span className="flex items-center gap-1.5 truncate">
-                        <span className={`led-dot ${on ? 'led-cyan' : 'led-off'}`} />
-                        <span className="truncate">
-                          [{sig.index}] {sig.symbol}
-                        </span>
-                      </span>
-                      <span className="ml-1 shrink-0 font-bold">{on ? '1' : '0'}</span>
-                    </button>
-                  )
-                })}
-              </div>
-            </div>
-
-            {/* DO[1..16] Bank */}
-            <div className="hmi-recessed rounded-md p-2.5">
-              <div className="mb-2 flex items-center justify-between font-mono text-[10px] font-bold text-[#00E676]">
-                <span>DO[1..16] — OUTPUTS FROM ROBOT TO PLC</span>
-              </div>
-              <div className="grid grid-cols-2 gap-1">
-                {DO_DEFINITIONS.map((sig) => {
-                  const on = doBank[sig.index]
-                  return (
-                    <div
-                      key={`full_do_${sig.index}`}
-                      className={`flex items-center justify-between rounded border px-2 py-1 font-mono text-[10px] ${
-                        on
-                          ? sig.index === 6
-                            ? 'border-[#FF1744]/50 bg-[#FF1744]/15 text-[#FCA5A5]'
-                            : 'border-[#00E676]/40 bg-[#00E676]/10 text-[#E6EDF3]'
-                          : 'border-[#232833] bg-[#14171D] text-[#64748B]'
-                      }`}
-                    >
-                      <span className="flex items-center gap-1.5 truncate">
-                        <span
-                          className={`led-dot ${
-                            on ? (sig.index === 6 ? 'led-red' : 'led-green') : 'led-off'
-                          }`}
-                        />
-                        <span className="truncate">
-                          [{sig.index}] {sig.symbol}
-                        </span>
-                      </span>
-                      <span className="ml-1 shrink-0 font-bold">{on ? '1' : '0'}</span>
-                    </div>
-                  )
-                })}
-              </div>
-            </div>
-
-            {/* Live Bus Event Log */}
-            <div className="hmi-recessed flex flex-col rounded-md p-2.5">
-              <div className="mb-2 font-mono text-[10px] font-bold text-[#FFB300]">
-                FIELDBUS HANDSHAKE TRACE
-              </div>
-              <div className="max-h-44 flex-1 space-y-1 overflow-y-auto font-mono text-[10px]">
-                {eventLog.length === 0 ? (
-                  <p className="text-[#64748B]">No signal transitions recorded yet.</p>
-                ) : (
-                  eventLog.slice(0, 14).map((ev) => (
-                    <div key={ev.id} className="flex items-center justify-between border-b border-[#1E222B] pb-0.5">
-                      <span className="text-[#64748B] tabular-nums">{ev.timestamp}</span>
-                      <span className="font-semibold text-[#E6EDF3]">{ev.channel}</span>
-                      <span
-                        className={
-                          ev.source === 'FAULT'
-                            ? 'text-[#FF1744]'
-                            : ev.source === 'VISION'
-                              ? 'text-[#00E5FF]'
-                              : 'text-[#00E676]'
-                        }
-                      >
-                        {ev.value}
-                      </span>
-                    </div>
-                  ))
-                )}
-              </div>
-            </div>
-          </div>
+        <div className="hidden border-t border-[#2A303C] bg-[#151820] px-4 py-3 shadow-2xl lg:block">
+          <FieldbusControlDeck compact />
         </div>
       )}
     </div>

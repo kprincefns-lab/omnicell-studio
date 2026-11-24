@@ -285,7 +285,7 @@ export function ScenarioTelemetryPanel() {
                 resetScenarioProgram()
                 startProgram()
               }}
-              className="rounded border border-[#FFB300]/50 bg-[#FFB300]/12 py-1.5 font-mono text-[10px] font-bold text-[#FFB300] hover:bg-[#FFB300]/22"
+              className="min-h-[38px] rounded border border-[#FFB300]/50 bg-[#FFB300]/12 py-1.5 font-mono text-[10px] font-bold text-[#FFB300] hover:bg-[#FFB300]/22"
             >
               RUN SINGULARITY
             </button>
@@ -295,7 +295,7 @@ export function ScenarioTelemetryPanel() {
                 loadSecondaryProgram()
                 startProgram()
               }}
-              className="rounded border border-[#FF1744]/60 bg-[#FF1744]/15 py-1.5 font-mono text-[10px] font-bold text-[#FF6B81] hover:bg-[#FF1744]/25"
+              className="min-h-[38px] rounded border border-[#FF1744]/60 bg-[#FF1744]/15 py-1.5 font-mono text-[10px] font-bold text-[#FF6B81] hover:bg-[#FF1744]/25"
             >
               TEST DCS INTRUSION
             </button>
@@ -314,9 +314,9 @@ export function ScenarioTelemetryPanel() {
             <button
               type="button"
               onClick={randomizeBillet}
-              className="flex items-center gap-1 rounded border border-[#00E5FF]/40 bg-[#00E5FF]/10 px-2 py-0.5 font-mono text-[9.5px] font-bold text-[#00E5FF] hover:bg-[#00E5FF]/20"
+              className="flex min-h-[30px] items-center gap-1 rounded border border-[#00E5FF]/40 bg-[#00E5FF]/10 px-2.5 py-0.5 font-mono text-[9.5px] font-bold text-[#00E5FF] hover:bg-[#00E5FF]/20"
             >
-              <RefreshCw className="h-2.5 w-2.5" />
+              <RefreshCw className="h-3 w-3" />
               NEW BILLET
             </button>
           </div>
@@ -326,24 +326,24 @@ export function ScenarioTelemetryPanel() {
             {/* Fault 1: SRVO-062 BZAL */}
             <div className="rounded border border-[#2D313B] bg-[#14171D] p-2">
               <div className="flex items-center justify-between gap-2">
-                <span className="flex items-center gap-1.5 font-mono text-[10px] font-bold text-[#E6EDF3]">
+                <span className="flex items-center gap-1.5 font-mono text-[10.5px] font-bold text-[#E6EDF3]">
                   <BatteryWarning className="h-3.5 w-3.5 text-[#FF1744]" />
                   SRVO-062 BZAL Alarm
                 </span>
                 <button
                   type="button"
                   onClick={injectBzalFault}
-                  className="rounded border border-[#FF1744]/50 bg-[#FF1744]/15 px-2 py-0.5 font-mono text-[9.5px] font-bold text-[#FF6B81] hover:bg-[#FF1744]/25"
+                  className="min-h-[34px] rounded border border-[#FF1744]/50 bg-[#FF1744]/15 px-3 font-mono text-[10px] font-bold text-[#FF6B81] hover:bg-[#FF1744]/25"
                 >
                   INJECT
                 </button>
               </div>
               {bzalRequiresMaster && (
-                <div className="mt-2 flex flex-wrap gap-1">
+                <div className="mt-2 flex flex-wrap gap-1.5">
                   <button
                     type="button"
                     onClick={clearBzalAlarm}
-                    className={`rounded border px-2 py-1 font-mono text-[9.5px] font-bold ${
+                    className={`min-h-[34px] rounded border px-2.5 py-1 font-mono text-[10px] font-bold ${
                       bzalCleared
                         ? 'border-[#00E676]/60 bg-[#00E676]/15 text-[#00E676]'
                         : 'border-[#FFB300]/60 bg-[#FFB300]/15 text-[#FFB300]'
@@ -354,7 +354,7 @@ export function ScenarioTelemetryPanel() {
                   <button
                     type="button"
                     onClick={snapRuntimeJointsToZero}
-                    className="rounded border border-[#00E5FF]/50 bg-[#00E5FF]/10 px-2 py-1 font-mono text-[9.5px] font-bold text-[#00E5FF]"
+                    className="min-h-[34px] rounded border border-[#00E5FF]/50 bg-[#00E5FF]/10 px-2.5 py-1 font-mono text-[10px] font-bold text-[#00E5FF]"
                   >
                     2. Jog Zero Marks
                   </button>
@@ -362,7 +362,7 @@ export function ScenarioTelemetryPanel() {
                     type="button"
                     disabled={!bzalCleared}
                     onClick={executeQuickMaster}
-                    className="rounded border border-[#00E676]/60 bg-[#00E676]/15 px-2 py-1 font-mono text-[9.5px] font-bold text-[#00E676] disabled:opacity-40"
+                    className="min-h-[34px] rounded border border-[#00E676]/60 bg-[#00E676]/15 px-2.5 py-1 font-mono text-[10px] font-bold text-[#00E676] disabled:opacity-40"
                   >
                     3. Quick Master &amp; Calibrate
                   </button>
@@ -373,9 +373,9 @@ export function ScenarioTelemetryPanel() {
             {/* Fault 2: Gripper Reed-Switch Timeout */}
             <div className="rounded border border-[#2D313B] bg-[#14171D] p-2">
               <div className="flex items-center justify-between gap-2">
-                <span className="flex items-center gap-1.5 font-mono text-[10px] font-bold text-[#E6EDF3]">
+                <span className="flex items-center gap-1.5 font-mono text-[10.5px] font-bold text-[#E6EDF3]">
                   <Zap className="h-3.5 w-3.5 text-[#FFB300]" />
-                  Gripper Reed-Switch Timeout
+                  Gripper Reed Timeout
                 </span>
                 <div className="flex items-center gap-1">
                   {faultSuppressReed ? (
@@ -385,7 +385,7 @@ export function ScenarioTelemetryPanel() {
                         restoreGripperReedSensor()
                         resetFault()
                       }}
-                      className="rounded border border-[#00E676]/60 bg-[#00E676]/15 px-2 py-0.5 font-mono text-[9.5px] font-bold text-[#00E676]"
+                      className="min-h-[34px] rounded border border-[#00E676]/60 bg-[#00E676]/15 px-2.5 font-mono text-[10px] font-bold text-[#00E676]"
                     >
                       RESTORE &amp; RESET
                     </button>
@@ -393,7 +393,7 @@ export function ScenarioTelemetryPanel() {
                     <button
                       type="button"
                       onClick={injectGripperReedFault}
-                      className="rounded border border-[#FFB300]/50 bg-[#FFB300]/15 px-2 py-0.5 font-mono text-[9.5px] font-bold text-[#FFB300] hover:bg-[#FFB300]/25"
+                      className="min-h-[34px] rounded border border-[#FFB300]/50 bg-[#FFB300]/15 px-3 font-mono text-[10px] font-bold text-[#FFB300] hover:bg-[#FFB300]/25"
                     >
                       INJECT
                     </button>
@@ -401,8 +401,8 @@ export function ScenarioTelemetryPanel() {
                 </div>
               </div>
               {faultSuppressReed && (
-                <p className="mt-1 font-mono text-[9.5px] text-[#FCA5A5]">
-                  DO[1]=ON commanded, DI[4] ClosedReed={di[4] ? 'ON' : 'OFF'}! Inspect Fieldbus strip then restore sensor.
+                <p className="mt-1 font-mono text-[10px] text-[#FCA5A5]">
+                  DO[1]=ON commanded, DI[4] ClosedReed={di[4] ? 'ON' : 'OFF'}! Inspect I/O Bus tab then restore sensor.
                 </p>
               )}
             </div>
@@ -410,9 +410,9 @@ export function ScenarioTelemetryPanel() {
             {/* Fault 3: CNC Door Over-Torque Collision */}
             <div className="rounded border border-[#2D313B] bg-[#14171D] p-2">
               <div className="flex items-center justify-between gap-2">
-                <span className="flex items-center gap-1.5 font-mono text-[10px] font-bold text-[#E6EDF3]">
+                <span className="flex items-center gap-1.5 font-mono text-[10.5px] font-bold text-[#E6EDF3]">
                   <ShieldAlert className="h-3.5 w-3.5 text-[#FF1744]" />
-                  CNC Door Over-Torque (SRVO-050)
+                  CNC Door Over-Torque
                 </span>
                 <div className="flex items-center gap-1">
                   {faultDoorStuck ? (
@@ -422,7 +422,7 @@ export function ScenarioTelemetryPanel() {
                         restoreCncDoorInterlock()
                         resetFault()
                       }}
-                      className="rounded border border-[#00E676]/60 bg-[#00E676]/15 px-2 py-0.5 font-mono text-[9.5px] font-bold text-[#00E676]"
+                      className="min-h-[34px] rounded border border-[#00E676]/60 bg-[#00E676]/15 px-2.5 font-mono text-[10px] font-bold text-[#00E676]"
                     >
                       OPEN DOOR &amp; RESET
                     </button>
@@ -430,7 +430,7 @@ export function ScenarioTelemetryPanel() {
                     <button
                       type="button"
                       onClick={injectCncDoorCollisionFault}
-                      className="rounded border border-[#FF1744]/50 bg-[#FF1744]/15 px-2 py-0.5 font-mono text-[9.5px] font-bold text-[#FF6B81] hover:bg-[#FF1744]/25"
+                      className="min-h-[34px] rounded border border-[#FF1744]/50 bg-[#FF1744]/15 px-3 font-mono text-[10px] font-bold text-[#FF6B81] hover:bg-[#FF1744]/25"
                     >
                       INJECT
                     </button>
@@ -438,7 +438,7 @@ export function ScenarioTelemetryPanel() {
                 </div>
               </div>
               {faultDoorStuck && (
-                <p className="mt-1 font-mono text-[9.5px] text-[#FCA5A5]">
+                <p className="mt-1 font-mono text-[10px] text-[#FCA5A5]">
                   DI[2] CNC_DoorOpen=OFF! Switch to T1 + WORLD, jog clear (−Y), then open door interlock &amp; reset.
                 </p>
               )}

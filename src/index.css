@@ -25,19 +25,52 @@
 
 * {
   box-sizing: border-box;
+  -webkit-tap-highlight-color: transparent;
 }
 
 html,
 body,
 #root {
   height: 100%;
+  height: 100dvh;
   width: 100%;
   margin: 0;
   padding: 0;
   overflow: hidden;
+  overscroll-behavior: none;
   background-color: #0A0C10;
   color: #E6EDF3;
   font-family: var(--font-sans);
+}
+
+button {
+  touch-action: manipulation;
+}
+
+/* Prevent iOS long-press callout & text selection on press-and-hold jog buttons */
+.jog-touch-key {
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
+}
+
+/* Safe area utility padding for notched iOS/Android phones */
+.safe-top {
+  padding-top: env(safe-area-inset-top);
+}
+
+.safe-bottom {
+  padding-bottom: env(safe-area-inset-bottom);
+}
+
+/* Hide scrollbars on horizontal mobile pill rails */
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
 }
 
 /* Precision Industrial Scrollbar */
@@ -83,9 +116,9 @@ body,
 .hmi-key:active:not(:disabled),
 .hmi-key-pressed {
   transform: translateY(1px);
-  background: linear-gradient(180deg, #1A202B 0%, #232A38 100%);
+  background: linear-gradient(180deg, #162230 0%, #1D2D40 100%);
   border-color: #00E5FF;
-  box-shadow: 0 0 8px rgba(0, 229, 255, 0.25) inset;
+  box-shadow: 0 0 10px rgba(0, 229, 255, 0.35) inset;
 }
 
 .tabular-nums {

@@ -28,7 +28,7 @@ import type {
 } from '../scenarios/types'
 
 export type WorkspaceTab = 'ROBOTICS' | 'PLC'
-export type DockTab = 'PENDANT' | 'CODE' | 'SCENARIO'
+export type DockTab = 'PENDANT' | 'CODE' | 'SCENARIO' | 'IO'
 
 /**
  * Mutable 60 FPS runtime state consumed directly by Three.js useFrame() hooks.

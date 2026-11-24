@@ -1,5 +1,7 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, type PointerEvent } from 'react'
 import {
+  ChevronDown,
+  ChevronUp,
   Crosshair,
   Hand,
   Home,
@@ -19,7 +21,7 @@ import {
 import { clearRuntimeJog, setRuntimeJogAxis, useRobotStore } from '../../engine/store/robotStore'
 
 const JOINT_LABELS = ['J1', 'J2', 'J3', 'J4', 'J5', 'J6'] as const
-const CART_LABELS = ['X', 'Y', 'Z', 'Rx (W)', 'Ry (P)', 'Rz (R)'] as const
+const CART_LABELS = ['X', 'Y', 'Z', 'Rx', 'Ry', 'Rz'] as const
 const KEY_BINDINGS: ReadonlyArray<[string, string]> = [
   ['Q', 'A'],
   ['W', 'S'],
@@ -31,6 +33,7 @@ const KEY_BINDINGS: ReadonlyArray<[string, string]> = [
 
 export function TeachPendantPanel() {
   const [pressedKey, setPressedKey] = useState<string | null>(null)
+  const [showTelemetry, setShowTelemetry] = useState(true)
 
   const scenarioId = useRobotStore((s) => s.scenarioId)
   const controllerMode = useRobotStore((s) => s.controllerMode)
@@ -69,7 +72,7 @@ export function TeachPendantPanel() {
   const solveAndApplyTcp = useRobotStore((s) => s.solveAndApplyTcp)
   const jumpToCalibrationApproach = useRobotStore((s) => s.jumpToCalibrationApproach)
 
-  // Keyboard Jog Shortcuts (Q/A, W/S, E/D, R/F, T/G, Y/H) — ignored when typing in an input/textarea
+  // Desktop keyboard jog shortcuts (Q/A, W/S, E/D, R/F, T/G, Y/H)
   useEffect(() => {
     const keyMap: Record<string, [number, -1 | 1]> = {
       q: [0, 1],
@@ -88,7 +91,7 @@ export function TeachPendantPanel() {
 
     const onKeyDown = (ev: KeyboardEvent) => {
       const target = ev.target as HTMLElement | null
-      if (target && (target.tagName === 'TEXTAREA' || target.tagName === 'INPUT')) return
+      if (target && (target.tagName === 'TEXTAREA' || target.tagName === 'INPUT' || target.tagName === 'SELECT')) return
       const mapped = keyMap[ev.key.toLowerCase()]
       if (!mapped) return
       const [axis, dir] = mapped
@@ -120,9 +123,21 @@ export function TeachPendantPanel() {
     }
   }, [])
 
-  const setJog = (axis: number, dir: -1 | 0 | 1) => {
+  // Pointer-capture safe press-and-hold for iOS Safari & Android Chrome
+  const handleJogDown = (e: PointerEvent<HTMLButtonElement>, axis: number, dir: -1 | 1) => {
+    e.preventDefault()
+    try {
+      e.currentTarget.setPointerCapture(e.pointerId)
+    } catch {
+      // Ignore synthetic events without active pointerId
+    }
     setRuntimeJogAxis(axis, dir)
-    setPressedKey(dir === 0 ? null : `${axis}_${dir}`)
+    setPressedKey(`${axis}_${dir}`)
+  }
+
+  const handleJogRelease = (axis: number) => {
+    setRuntimeJogAxis(axis, 0)
+    setPressedKey(null)
   }
 
   const canManualJog = deadmanEnabled && (controllerMode === 'T1' || controllerMode === 'T2') && !isRunning
@@ -130,21 +145,21 @@ export function TeachPendantPanel() {
   const axisLabels = coordinateFrame === 'JOINT' ? JOINT_LABELS : CART_LABELS
 
   return (
-    <div className="flex h-full flex-col gap-2.5 overflow-y-auto p-3">
-      {/* Row 1: Deadman Switch + Controller Mode (T1/T2/AUTO) + STEP/CONT */}
-      <div className="hmi-recessed rounded-md p-2.5">
-        <div className="mb-2 flex items-center justify-between gap-2">
+    <div className="flex h-full flex-col gap-2 overflow-y-auto p-2.5 pb-4 lg:gap-2.5 lg:p-3">
+      {/* Row 1: Deadman + T1/T2/AUTO + STEP/CONT + Transport Bar */}
+      <div className="hmi-recessed rounded-md p-2 lg:p-2.5">
+        <div className="mb-2 flex flex-wrap items-center justify-between gap-1.5">
           <button
             type="button"
             onClick={() => setDeadmanEnabled(!deadmanEnabled)}
-            className={`flex items-center gap-1.5 rounded border px-2.5 py-1 font-mono text-[10px] font-bold transition-colors ${
+            className={`flex min-h-[34px] items-center gap-1 rounded border px-2 py-1 font-mono text-[10px] font-bold transition-colors ${
               deadmanEnabled
                 ? 'border-[#00E676]/60 bg-[#00E676]/15 text-[#00E676]'
                 : 'border-[#FFB300]/50 bg-[#FFB300]/10 text-[#FFB300]'
             }`}
           >
             <Hand className="h-3.5 w-3.5" />
-            DEADMAN: {deadmanEnabled ? 'HELD' : 'RELEASED'}
+            <span>{deadmanEnabled ? 'DEADMAN ON' : 'DEADMAN OFF'}</span>
           </button>
 
           <div className="flex items-center rounded border border-[#2A303C] bg-[#151820] p-0.5">
@@ -153,7 +168,7 @@ export function TeachPendantPanel() {
                 key={m}
                 type="button"
                 onClick={() => setControllerMode(m)}
-                className={`rounded px-2 py-0.5 font-mono text-[10px] font-bold transition-colors ${
+                className={`min-h-[30px] rounded px-2.5 py-0.5 font-mono text-[10.5px] font-bold transition-colors ${
                   controllerMode === m
                     ? m === 'AUTO'
                       ? 'bg-[#00E676]/20 text-[#00E676]'
@@ -172,7 +187,7 @@ export function TeachPendantPanel() {
                 key={ex}
                 type="button"
                 onClick={() => setExecutionMode(ex)}
-                className={`rounded px-1.5 py-0.5 font-mono text-[10px] font-semibold ${
+                className={`min-h-[30px] rounded px-2 py-0.5 font-mono text-[10px] font-semibold ${
                   executionMode === ex
                     ? 'bg-[#FFB300]/20 text-[#FFB300]'
                     : 'text-[#64748B] hover:text-[#CBD5E1]'
@@ -184,63 +199,63 @@ export function TeachPendantPanel() {
           </div>
         </div>
 
-        {/* Cycle Transport Bar */}
+        {/* Thumb-Friendly Cycle Transport Bar */}
         <div className="grid grid-cols-5 gap-1.5">
           <button
             type="button"
             onClick={startProgram}
-            className={`flex items-center justify-center gap-1 rounded border py-1.5 font-mono text-[10px] font-bold transition-colors ${
+            className={`flex min-h-[38px] flex-col items-center justify-center gap-0.5 rounded border py-1 font-mono text-[9.5px] font-bold transition-colors sm:flex-row sm:gap-1 sm:text-[10px] ${
               isRunning
                 ? 'border-[#00E676] bg-[#00E676]/25 text-[#00E676]'
                 : 'border-[#00E676]/45 bg-[#00E676]/12 text-[#00E676] hover:bg-[#00E676]/20'
             }`}
           >
-            <Play className="h-3 w-3" />
-            {isPaused ? 'RESUME' : 'RUN'}
+            <Play className="h-3.5 w-3.5" />
+            {isPaused ? 'CONT' : 'RUN'}
           </button>
           <button
             type="button"
             onClick={stepProgram}
-            className="flex items-center justify-center gap-1 rounded border border-[#00E5FF]/40 bg-[#00E5FF]/10 py-1.5 font-mono text-[10px] font-bold text-[#00E5FF] hover:bg-[#00E5FF]/20"
+            className="flex min-h-[38px] flex-col items-center justify-center gap-0.5 rounded border border-[#00E5FF]/40 bg-[#00E5FF]/10 py-1 font-mono text-[9.5px] font-bold text-[#00E5FF] hover:bg-[#00E5FF]/20 sm:flex-row sm:gap-1 sm:text-[10px]"
           >
-            <SkipForward className="h-3 w-3" />
+            <SkipForward className="h-3.5 w-3.5" />
             STEP
           </button>
           <button
             type="button"
             onClick={holdProgram}
-            className="flex items-center justify-center gap-1 rounded border border-[#FFB300]/45 bg-[#FFB300]/10 py-1.5 font-mono text-[10px] font-bold text-[#FFB300] hover:bg-[#FFB300]/20"
+            className="flex min-h-[38px] flex-col items-center justify-center gap-0.5 rounded border border-[#FFB300]/45 bg-[#FFB300]/10 py-1 font-mono text-[9.5px] font-bold text-[#FFB300] hover:bg-[#FFB300]/20 sm:flex-row sm:gap-1 sm:text-[10px]"
           >
-            <Pause className="h-3 w-3" />
+            <Pause className="h-3.5 w-3.5" />
             HOLD
           </button>
           <button
             type="button"
             onClick={stopProgram}
-            className="flex items-center justify-center gap-1 rounded border border-[#FF1744]/40 bg-[#FF1744]/10 py-1.5 font-mono text-[10px] font-bold text-[#FF6B81] hover:bg-[#FF1744]/20"
+            className="flex min-h-[38px] flex-col items-center justify-center gap-0.5 rounded border border-[#FF1744]/40 bg-[#FF1744]/10 py-1 font-mono text-[9.5px] font-bold text-[#FF6B81] hover:bg-[#FF1744]/20 sm:flex-row sm:gap-1 sm:text-[10px]"
           >
-            <Square className="h-3 w-3" />
+            <Square className="h-3.5 w-3.5" />
             STOP
           </button>
           <button
             type="button"
             onClick={returnHome}
-            className="flex items-center justify-center gap-1 rounded border border-[#353D4D] bg-[#1F242E] py-1.5 font-mono text-[10px] font-bold text-[#CBD5E1] hover:border-[#00E5FF]/50 hover:text-[#00E5FF]"
+            className="flex min-h-[38px] flex-col items-center justify-center gap-0.5 rounded border border-[#353D4D] bg-[#1F242E] py-1 font-mono text-[9.5px] font-bold text-[#CBD5E1] hover:border-[#00E5FF]/50 hover:text-[#00E5FF] sm:flex-row sm:gap-1 sm:text-[10px]"
           >
-            <Home className="h-3 w-3" />
+            <Home className="h-3.5 w-3.5" />
             HOME
           </button>
         </div>
 
         {/* Speed Override % */}
-        <div className="mt-2.5 flex items-center gap-2">
-          <span className="font-mono text-[10px] font-semibold text-[#8B949E]">SPEED OVR</span>
+        <div className="mt-2 flex items-center gap-2">
+          <span className="font-mono text-[10px] font-semibold text-[#8B949E]">OVR</span>
           <button
             type="button"
-            onClick={() => setSpeedOverride(speedOverridePct - 5)}
-            className="hmi-key rounded px-2 py-0.5 font-mono text-[10px] font-bold text-[#E6EDF3]"
+            onClick={() => setSpeedOverride(speedOverridePct - 10)}
+            className="hmi-key min-h-[32px] rounded px-2.5 font-mono text-[11px] font-bold text-[#E6EDF3]"
           >
-            -5%
+            −
           </button>
           <input
             type="range"
@@ -249,15 +264,15 @@ export function TeachPendantPanel() {
             step={5}
             value={speedOverridePct}
             onChange={(e) => setSpeedOverride(Number(e.target.value))}
-            className="h-1.5 flex-1 cursor-pointer accent-[#00E5FF]"
+            className="h-2 flex-1 cursor-pointer accent-[#00E5FF]"
             aria-label="Speed Override Percentage"
           />
           <button
             type="button"
-            onClick={() => setSpeedOverride(speedOverridePct + 5)}
-            className="hmi-key rounded px-2 py-0.5 font-mono text-[10px] font-bold text-[#E6EDF3]"
+            onClick={() => setSpeedOverride(speedOverridePct + 10)}
+            className="hmi-key min-h-[32px] rounded px-2.5 font-mono text-[11px] font-bold text-[#E6EDF3]"
           >
-            +5%
+            +
           </button>
           <span className="w-10 text-right font-mono text-xs font-bold text-[#00E5FF] tabular-nums">
             {speedOverridePct}%
@@ -265,19 +280,19 @@ export function TeachPendantPanel() {
         </div>
       </div>
 
-      {/* Row 2: Coordinate Frame Switcher & Press-and-Hold Jog Keypad */}
-      <div className="hmi-recessed rounded-md p-2.5">
-        <div className="mb-2 flex items-center justify-between">
+      {/* Row 2: Coordinate Frame Switcher & Thumb-Sized Hold-to-Jog Keypad */}
+      <div className="hmi-recessed rounded-md p-2 lg:p-2.5">
+        <div className="mb-2 flex items-center justify-between gap-2">
           <span className="font-mono text-[10px] font-bold tracking-wider text-[#94A3B8]">
-            COORD FRAME
+            FRAME
           </span>
-          <div className="flex items-center gap-1">
+          <div className="grid flex-1 grid-cols-4 gap-1">
             {(['JOINT', 'WORLD', 'TOOL', 'USER'] as CoordinateFrameMode[]).map((frame) => (
               <button
                 key={frame}
                 type="button"
                 onClick={() => setCoordinateFrame(frame)}
-                className={`rounded border px-2 py-0.5 font-mono text-[10px] font-bold transition-colors ${
+                className={`min-h-[32px] rounded border font-mono text-[10px] font-bold transition-colors ${
                   coordinateFrame === frame
                     ? 'border-[#00E5FF] bg-[#00E5FF]/15 text-[#00E5FF]'
                     : 'border-[#2A303C] bg-[#181C24] text-[#8B949E] hover:text-[#E6EDF3]'
@@ -290,13 +305,20 @@ export function TeachPendantPanel() {
         </div>
 
         {!canManualJog && (
-          <div className="mb-2 rounded border border-[#FFB300]/35 bg-[#FFB300]/10 px-2 py-1 font-mono text-[10px] text-[#FFB300]">
+          <button
+            type="button"
+            onClick={() => {
+              if (controllerMode === 'AUTO') setControllerMode('T1')
+              if (!deadmanEnabled) setDeadmanEnabled(true)
+            }}
+            className="mb-2 w-full rounded border border-[#FFB300]/45 bg-[#FFB300]/12 px-2.5 py-1.5 text-left font-mono text-[10px] font-semibold text-[#FFB300]"
+          >
             {controllerMode === 'AUTO'
-              ? 'Switch keyswitch to T1 or T2 for manual pendant jogging.'
+              ? 'Tap here to switch AUTO → T1 for manual thumb jogging.'
               : !deadmanEnabled
-                ? 'Hold/Enable DEADMAN switch to energize manual jog servos.'
+                ? 'Tap here to latch DEADMAN ON for manual jogging.'
                 : 'Stop program execution before manual jogging.'}
-          </div>
+          </button>
         )}
 
         <div className="grid grid-cols-2 gap-1.5">
@@ -307,31 +329,33 @@ export function TeachPendantPanel() {
             return (
               <div
                 key={label}
-                className="flex items-center justify-between gap-1 rounded border border-[#242A35] bg-[#151820] px-1.5 py-1"
+                className="flex items-center justify-between gap-1 rounded border border-[#242A35] bg-[#151820] p-1"
               >
                 <button
                   type="button"
                   disabled={!canManualJog}
-                  onPointerDown={() => setJog(idx, -1)}
-                  onPointerUp={() => setJog(idx, 0)}
-                  onPointerLeave={() => setJog(idx, 0)}
-                  className={`hmi-key flex-1 rounded py-1 font-mono text-[11px] font-bold disabled:opacity-40 ${
+                  onPointerDown={(e) => handleJogDown(e, idx, -1)}
+                  onPointerUp={() => handleJogRelease(idx)}
+                  onPointerCancel={() => handleJogRelease(idx)}
+                  onContextMenu={(e) => e.preventDefault()}
+                  className={`hmi-key jog-touch-key flex min-h-[44px] flex-1 items-center justify-center rounded font-mono text-xs font-bold disabled:opacity-35 lg:min-h-[34px] lg:text-[11px] ${
                     negActive ? 'hmi-key-pressed text-[#00E5FF]' : 'text-[#E6EDF3]'
                   }`}
                   title={`Jog -${label} (Hold key ${negKey})`}
                 >
                   −{label}
                 </button>
-                <span className="w-8 text-center font-mono text-[9px] text-[#64748B]">
+                <span className="hidden w-7 text-center font-mono text-[9px] text-[#64748B] lg:inline">
                   {negKey}/{posKey}
                 </span>
                 <button
                   type="button"
                   disabled={!canManualJog}
-                  onPointerDown={() => setJog(idx, 1)}
-                  onPointerUp={() => setJog(idx, 0)}
-                  onPointerLeave={() => setJog(idx, 0)}
-                  className={`hmi-key flex-1 rounded py-1 font-mono text-[11px] font-bold disabled:opacity-40 ${
+                  onPointerDown={(e) => handleJogDown(e, idx, 1)}
+                  onPointerUp={() => handleJogRelease(idx)}
+                  onPointerCancel={() => handleJogRelease(idx)}
+                  onContextMenu={(e) => e.preventDefault()}
+                  className={`hmi-key jog-touch-key flex min-h-[44px] flex-1 items-center justify-center rounded font-mono text-xs font-bold disabled:opacity-35 lg:min-h-[34px] lg:text-[11px] ${
                     posActive ? 'hmi-key-pressed text-[#00E5FF]' : 'text-[#E6EDF3]'
                   }`}
                   title={`Jog +${label} (Hold key ${posKey})`}
@@ -350,12 +374,12 @@ export function TeachPendantPanel() {
           <div className="mb-1.5 flex items-center justify-between">
             <div className="flex items-center gap-1.5">
               <Crosshair className="h-3.5 w-3.5 text-[#00E5FF]" />
-              <span className="font-mono text-[11px] font-bold text-[#00E5FF]">
-                3-POINT SPHERE-FIT TCP CALIBRATION
+              <span className="font-mono text-[10.5px] font-bold text-[#00E5FF]">
+                3-POINT TCP CALIBRATION
               </span>
             </div>
             <span
-              className={`font-mono text-[10px] font-bold tabular-nums ${
+              className={`font-mono text-[10.5px] font-bold tabular-nums ${
                 hudPhysicalTipErrorMm < 1.5 ? 'text-[#00E676]' : 'text-[#FFB300]'
               }`}
             >
@@ -363,56 +387,50 @@ export function TeachPendantPanel() {
             </span>
           </div>
 
-          <p className="mb-2 text-[11px] leading-snug text-[#94A3B8]">
-            Jog torch tip to the glowing pin from 3 orientations (or use Approach Presets + fine jog), record each point, then compute <span className="font-mono text-[#E6EDF3]">UTOOL[1]</span>.
-          </p>
-
-          {/* Approach Presets to inspect & fine-jog */}
-          <div className="mb-2 grid grid-cols-3 gap-1">
+          <div className="mb-2 grid grid-cols-3 gap-1.5">
             {([1, 2, 3] as const).map((n) => (
               <button
                 key={n}
                 type="button"
                 onClick={() => jumpToCalibrationApproach(n)}
-                className="rounded border border-[#2A3548] bg-[#18212E] py-1 font-mono text-[10px] font-semibold text-[#CBD5E1] hover:border-[#00E5FF]/60 hover:text-[#00E5FF]"
+                className="min-h-[36px] rounded border border-[#2A3548] bg-[#18212E] font-mono text-[10.5px] font-semibold text-[#CBD5E1] hover:border-[#00E5FF]/60 hover:text-[#00E5FF]"
               >
                 Approach #{n}
               </button>
             ))}
           </div>
 
-          {/* Record / Solve / Reset buttons */}
           <div className="flex items-center gap-1.5">
             <button
               type="button"
               onClick={recordTcpSample}
-              className="flex flex-1 items-center justify-center gap-1 rounded border border-[#00E5FF]/50 bg-[#00E5FF]/15 py-1.5 font-mono text-[10px] font-bold text-[#00E5FF] hover:bg-[#00E5FF]/25"
+              className="flex min-h-[40px] flex-1 items-center justify-center gap-1 rounded border border-[#00E5FF]/50 bg-[#00E5FF]/15 font-mono text-[10.5px] font-bold text-[#00E5FF] hover:bg-[#00E5FF]/25"
             >
-              <Target className="h-3 w-3" />
-              RECORD PT ({tcpSamples.length}/3)
+              <Target className="h-3.5 w-3.5" />
+              RECORD ({tcpSamples.length}/3)
             </button>
             <button
               type="button"
               disabled={tcpSamples.length < 3}
               onClick={solveAndApplyTcp}
-              className="flex flex-1 items-center justify-center gap-1 rounded border border-[#00E676]/50 bg-[#00E676]/15 py-1.5 font-mono text-[10px] font-bold text-[#00E676] hover:bg-[#00E676]/25 disabled:opacity-40"
+              className="flex min-h-[40px] flex-1 items-center justify-center gap-1 rounded border border-[#00E676]/50 bg-[#00E676]/15 font-mono text-[10.5px] font-bold text-[#00E676] hover:bg-[#00E676]/25 disabled:opacity-40"
             >
-              <RotateCcw className="h-3 w-3" />
-              COMPUTE TCP
+              <RotateCcw className="h-3.5 w-3.5" />
+              SOLVE TCP
             </button>
             <button
               type="button"
               onClick={clearTcpSamples}
               title="Reset TCP Calibration"
-              className="rounded border border-[#2A303C] bg-[#1C1F26] p-1.5 text-[#94A3B8] hover:text-[#FF6B81]"
+              className="flex min-h-[40px] w-10 items-center justify-center rounded border border-[#2A303C] bg-[#1C1F26] text-[#94A3B8] hover:text-[#FF6B81]"
             >
-              <Trash2 className="h-3.5 w-3.5" />
+              <Trash2 className="h-4 w-4" />
             </button>
           </div>
 
           {tcpCalResult && (
             <div
-              className={`mt-2 rounded border px-2 py-1.5 font-mono text-[10px] tabular-nums ${
+              className={`mt-2 rounded border px-2.5 py-2 font-mono text-[10px] tabular-nums ${
                 tcpCalResult.success && tcpCalResult.rmsErrorMm < 1.5
                   ? 'border-[#00E676]/45 bg-[#00E676]/10 text-[#00E676]'
                   : 'border-[#FFB300]/45 bg-[#FFB300]/10 text-[#FFB300]'
@@ -424,102 +442,116 @@ export function TeachPendantPanel() {
               </div>
               <div className="mt-0.5 text-[#94A3B8]">
                 {s1Telemetry.tcpRotationVerified
-                  ? '✓ Rotation Invariance Verified in TOOL mode (< 1.5 mm drift)'
-                  : 'Next: Switch to TOOL frame and jog ±Rx/±Ry/±Rz to verify tip stays locked on pin.'}
+                  ? '✓ Rotation Invariance Verified (< 1.5 mm drift)'
+                  : 'Switch to TOOL frame and hold ±Rx/±Ry/±Rz to verify tip stays locked on pin.'}
               </div>
             </div>
           )}
         </div>
       )}
 
-      {/* Row 4: Live Joint Angles & Velocity Bars + Cartesian WPR HUD */}
+      {/* Row 4: Collapsible Joint Angles & Cartesian WPR HUD */}
       <div className="hmi-recessed rounded-md p-2.5">
-        <div className="mb-1.5 flex items-center justify-between font-mono text-[10px]">
-          <span className="font-bold text-[#94A3B8]">JOINT POSITIONS &amp; VELOCITY</span>
-          <span
-            className={`font-semibold tabular-nums ${
-              hudSingularity.wristCritical
-                ? 'text-[#FF1744]'
-                : hudSingularity.wristWarning
-                  ? 'text-[#FFB300]'
-                  : 'text-[#00E676]'
-            }`}
-          >
-            |J5| {hudSingularity.wristAngleDeg.toFixed(1)}°
-          </span>
-        </div>
-
-        <div className="space-y-1.5">
-          {hudJoints.map((deg, i) => {
-            const min = OMNI_ROBOT_SPEC.jointMin[i]
-            const max = OMNI_ROBOT_SPEC.jointMax[i]
-            const pct = ((deg - min) / (max - min)) * 100
-            const vel = Math.abs(hudJointVel[i])
-            const nearJ5Sing = i === 4 && hudSingularity.wristWarning
-            const highVel = vel > OMNI_ROBOT_SPEC.jointMaxVelDegPerSec[i] * 0.65
-
-            return (
-              <div key={JOINT_LABELS[i]} className="flex items-center gap-2 font-mono text-[10px] tabular-nums">
-                <span className={`w-5 font-bold ${nearJ5Sing ? 'text-[#FFB300]' : 'text-[#8B949E]'}`}>
-                  {JOINT_LABELS[i]}
-                </span>
-                <div className="relative h-2 flex-1 overflow-hidden rounded-full bg-[#1C212B]">
-                  <div
-                    className={`h-full rounded-full transition-all duration-75 ${
-                      nearJ5Sing
-                        ? 'bg-[#FFB300]'
-                        : highVel
-                          ? 'bg-[#FF1744]'
-                          : 'bg-[#00E5FF]'
-                    }`}
-                    style={{ width: `${Math.max(2, Math.min(100, pct))}%` }}
-                  />
-                </div>
-                <span className="w-14 text-right font-semibold text-[#E6EDF3]">
-                  {deg.toFixed(1)}°
-                </span>
-                <span
-                  className={`w-14 text-right text-[9px] ${
-                    highVel ? 'font-bold text-[#FF1744]' : 'text-[#64748B]'
-                  }`}
-                >
-                  {vel.toFixed(0)}°/s
-                </span>
-              </div>
-            )
-          })}
-        </div>
-
-        {/* Live Cartesian WPR Readout */}
-        <div className="mt-3 border-t border-[#232833] pt-2">
-          <div className="mb-1.5 flex items-center justify-between font-mono text-[10px]">
-            <span className="font-bold text-[#94A3B8]">
-              TCP CARTESIAN ({coordinateFrame === 'USER' ? userFrame.name : 'WORLD'})
+        <button
+          type="button"
+          onClick={() => setShowTelemetry(!showTelemetry)}
+          className="flex w-full items-center justify-between font-mono text-[10px]"
+        >
+          <span className="font-bold text-[#94A3B8]">JOINTS &amp; CARTESIAN READOUT</span>
+          <span className="flex items-center gap-2">
+            <span
+              className={`font-semibold tabular-nums ${
+                hudSingularity.wristCritical
+                  ? 'text-[#FF1744]'
+                  : hudSingularity.wristWarning
+                    ? 'text-[#FFB300]'
+                    : 'text-[#00E676]'
+              }`}
+            >
+              |J5| {hudSingularity.wristAngleDeg.toFixed(1)}°
             </span>
-            <span className="text-[#64748B]">{tool.name}</span>
-          </div>
-          <div className="grid grid-cols-3 gap-1.5 font-mono text-[10px] tabular-nums">
-            {[
-              ['X', activePose.x, 'mm'],
-              ['Y', activePose.y, 'mm'],
-              ['Z', activePose.z, 'mm'],
-              ['W', activePose.w, '°'],
-              ['P', activePose.p, '°'],
-              ['R', activePose.r, '°'],
-            ].map(([k, val, unit]) => (
-              <div
-                key={String(k)}
-                className="flex items-center justify-between rounded border border-[#222731] bg-[#14171D] px-2 py-1"
-              >
-                <span className="font-bold text-[#64748B]">{k}</span>
-                <span className="font-semibold text-[#E6EDF3]">
-                  {Number(val).toFixed(1)}
-                  <span className="ml-0.5 text-[9px] text-[#64748B]">{unit}</span>
+            {showTelemetry ? (
+              <ChevronUp className="h-3.5 w-3.5 text-[#64748B]" />
+            ) : (
+              <ChevronDown className="h-3.5 w-3.5 text-[#64748B]" />
+            )}
+          </span>
+        </button>
+
+        {showTelemetry && (
+          <>
+            <div className="mt-2 space-y-1.5">
+              {hudJoints.map((deg, i) => {
+                const min = OMNI_ROBOT_SPEC.jointMin[i]
+                const max = OMNI_ROBOT_SPEC.jointMax[i]
+                const pct = ((deg - min) / (max - min)) * 100
+                const vel = Math.abs(hudJointVel[i])
+                const nearJ5Sing = i === 4 && hudSingularity.wristWarning
+                const highVel = vel > OMNI_ROBOT_SPEC.jointMaxVelDegPerSec[i] * 0.65
+
+                return (
+                  <div key={JOINT_LABELS[i]} className="flex items-center gap-2 font-mono text-[10px] tabular-nums">
+                    <span className={`w-5 font-bold ${nearJ5Sing ? 'text-[#FFB300]' : 'text-[#8B949E]'}`}>
+                      {JOINT_LABELS[i]}
+                    </span>
+                    <div className="relative h-2 flex-1 overflow-hidden rounded-full bg-[#1C212B]">
+                      <div
+                        className={`h-full rounded-full transition-all duration-75 ${
+                          nearJ5Sing
+                            ? 'bg-[#FFB300]'
+                            : highVel
+                              ? 'bg-[#FF1744]'
+                              : 'bg-[#00E5FF]'
+                        }`}
+                        style={{ width: `${Math.max(2, Math.min(100, pct))}%` }}
+                      />
+                    </div>
+                    <span className="w-13 text-right font-semibold text-[#E6EDF3]">
+                      {deg.toFixed(1)}°
+                    </span>
+                    <span
+                      className={`w-12 text-right text-[9px] ${
+                        highVel ? 'font-bold text-[#FF1744]' : 'text-[#64748B]'
+                      }`}
+                    >
+                      {vel.toFixed(0)}°/s
+                    </span>
+                  </div>
+                )
+              })}
+            </div>
+
+            <div className="mt-2.5 border-t border-[#232833] pt-2">
+              <div className="mb-1 flex items-center justify-between font-mono text-[9.5px]">
+                <span className="font-bold text-[#94A3B8]">
+                  TCP ({coordinateFrame === 'USER' ? userFrame.name : 'WORLD'})
                 </span>
+                <span className="truncate text-[#64748B]">{tool.name}</span>
               </div>
-            ))}
-          </div>
-        </div>
+              <div className="grid grid-cols-3 gap-1.5 font-mono text-[10px] tabular-nums">
+                {[
+                  ['X', activePose.x, 'mm'],
+                  ['Y', activePose.y, 'mm'],
+                  ['Z', activePose.z, 'mm'],
+                  ['W', activePose.w, '°'],
+                  ['P', activePose.p, '°'],
+                  ['R', activePose.r, '°'],
+                ].map(([k, val, unit]) => (
+                  <div
+                    key={String(k)}
+                    className="flex items-center justify-between rounded border border-[#222731] bg-[#14171D] px-2 py-1"
+                  >
+                    <span className="font-bold text-[#64748B]">{k}</span>
+                    <span className="font-semibold text-[#E6EDF3]">
+                      {Number(val).toFixed(1)}
+                      <span className="ml-0.5 text-[9px] text-[#64748B]">{unit}</span>
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </>
+        )}
       </div>
     </div>
   )

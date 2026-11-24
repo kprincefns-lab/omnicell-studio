@@ -67,13 +67,11 @@ export function MultiOemCodePanel() {
     setRawEditMode(false)
   }
 
-  // Inline quick-mutator for motion instructions (toggle J/L or adjust FINE/CNT or speed)
   const mutateInstruction = (index: number, updater: (inst: ProgramInstruction) => ProgramInstruction) => {
     const next = instructions.map((inst, idx) => (idx === index ? updater(inst) : inst))
     updateInstructions(next)
   }
 
-  // Quick helper for Scenario 2: tune air moves to CNT65 to compare
   const applyRecommendedCntPreset = () => {
     const next = instructions.map((inst) => {
       if ((inst.type === 'MOVE_J' || inst.type === 'MOVE_L') && ![3, 7, 1].includes(inst.targetId)) {
@@ -88,10 +86,10 @@ export function MultiOemCodePanel() {
   const selectedInst = instructions[clampedSelIdx]
 
   return (
-    <div className="flex h-full flex-col gap-2 overflow-hidden p-3">
-      {/* Multi-OEM Dialect Switcher */}
-      <div className="flex flex-wrap items-center justify-between gap-1.5">
-        <div className="flex flex-wrap items-center gap-1">
+    <div className="flex h-full flex-col gap-2 overflow-hidden p-2.5 lg:p-3">
+      {/* Horizontally Scrollable Multi-OEM Dialect Rail */}
+      <div className="flex items-center justify-between gap-2">
+        <div className="no-scrollbar flex flex-1 items-center gap-1 overflow-x-auto py-0.5">
           {OEM_DIALECTS.map((oem) => {
             const active = oem.id === dialect
             return (
@@ -102,7 +100,7 @@ export function MultiOemCodePanel() {
                   setDialect(oem.id)
                   setRawEditMode(false)
                 }}
-                className={`flex items-center gap-1.5 rounded border px-2 py-1 font-mono text-[10px] font-bold transition-colors ${
+                className={`flex min-h-[34px] shrink-0 items-center gap-1.5 rounded border px-2.5 py-1 font-mono text-[10.5px] font-bold transition-colors ${
                   active
                     ? 'border-[#3F4A5E] bg-[#242B38] text-[#F1F5F9]'
                     : 'border-[#252B36] bg-[#151820] text-[#7D8797] hover:border-[#343C4C] hover:text-[#CBD5E1]'
@@ -118,21 +116,21 @@ export function MultiOemCodePanel() {
           })}
         </div>
 
-        <div className="flex items-center gap-1">
+        <div className="flex shrink-0 items-center gap-1">
           {!rawEditMode ? (
             <button
               type="button"
               onClick={openRawEditor}
-              className="flex items-center gap-1 rounded border border-[#00E5FF]/40 bg-[#00E5FF]/10 px-2 py-1 font-mono text-[10px] font-semibold text-[#00E5FF] hover:bg-[#00E5FF]/20"
+              className="flex min-h-[34px] items-center gap-1 rounded border border-[#00E5FF]/40 bg-[#00E5FF]/10 px-2.5 font-mono text-[10px] font-semibold text-[#00E5FF] hover:bg-[#00E5FF]/20"
             >
               <Edit3 className="h-3 w-3" />
-              EDIT CODE
+              <span className="hidden sm:inline">EDIT</span>
             </button>
           ) : (
             <button
               type="button"
               onClick={applyRawEdits}
-              className="flex items-center gap-1 rounded border border-[#00E676]/60 bg-[#00E676]/15 px-2 py-1 font-mono text-[10px] font-bold text-[#00E676] hover:bg-[#00E676]/25"
+              className="flex min-h-[34px] items-center gap-1 rounded border border-[#00E676]/60 bg-[#00E676]/15 px-2.5 font-mono text-[10px] font-bold text-[#00E676] hover:bg-[#00E676]/25"
             >
               <Check className="h-3 w-3" />
               APPLY
@@ -142,41 +140,40 @@ export function MultiOemCodePanel() {
             type="button"
             onClick={resetScenarioProgram}
             title="Reset Program to Scenario Default"
-            className="rounded border border-[#2A303C] bg-[#1C1F26] p-1 text-[#94A3B8] hover:text-[#E6EDF3]"
+            className="flex min-h-[34px] w-8 items-center justify-center rounded border border-[#2A303C] bg-[#1C1F26] text-[#94A3B8] hover:text-[#E6EDF3]"
           >
             <RotateCcw className="h-3.5 w-3.5" />
           </button>
         </div>
       </div>
 
-      {/* Program Header & Cycle Summary */}
-      <div className="flex items-center justify-between rounded border border-[#252B36] bg-[#14171D] px-2.5 py-1.5 font-mono text-[10px]">
-        <div className="flex items-center gap-2">
-          <Code2 className="h-3.5 w-3.5" style={{ color: activeMeta.accentColor }} />
-          <span className="font-bold text-[#E6EDF3]">
+      {/* Program Header & Quick Run/Step Bar */}
+      <div className="flex items-center justify-between gap-2 rounded border border-[#252B36] bg-[#14171D] px-2.5 py-1.5 font-mono text-[10px]">
+        <div className="flex min-w-0 items-center gap-1.5">
+          <Code2 className="h-3.5 w-3.5 shrink-0" style={{ color: activeMeta.accentColor }} />
+          <span className="truncate font-bold text-[#E6EDF3]">
             {programName}
             {activeMeta.fileExtension}
           </span>
-          <span className="text-[#64748B]">({activeMeta.controllerFamily})</span>
         </div>
-        <div className="flex items-center gap-2 tabular-nums">
+        <div className="flex shrink-0 items-center gap-1.5 tabular-nums">
           <span className="text-[#94A3B8]">
-            EST: <strong className="text-[#00E5FF]">{pathPreview.estimatedCycleTimeSec.toFixed(2)}s</strong>
+            <strong className="text-[#00E5FF]">{pathPreview.estimatedCycleTimeSec.toFixed(2)}s</strong>
           </span>
           <button
             type="button"
             onClick={startProgram}
-            className="flex items-center gap-1 rounded bg-[#00E676]/15 px-2 py-0.5 font-bold text-[#00E676] hover:bg-[#00E676]/25"
+            className="flex min-h-[28px] items-center gap-1 rounded bg-[#00E676]/15 px-2.5 font-bold text-[#00E676] hover:bg-[#00E676]/25"
           >
-            <Play className="h-2.5 w-2.5" />
+            <Play className="h-3 w-3" />
             RUN
           </button>
           <button
             type="button"
             onClick={stepProgram}
-            className="flex items-center gap-1 rounded bg-[#00E5FF]/15 px-2 py-0.5 font-bold text-[#00E5FF] hover:bg-[#00E5FF]/25"
+            className="flex min-h-[28px] items-center gap-1 rounded bg-[#00E5FF]/15 px-2 font-bold text-[#00E5FF] hover:bg-[#00E5FF]/25"
           >
-            <SkipForward className="h-2.5 w-2.5" />
+            <SkipForward className="h-3 w-3" />
             STEP
           </button>
         </div>
@@ -184,29 +181,30 @@ export function MultiOemCodePanel() {
 
       {/* Scenario 2 Quick CNT Optimization Hint Bar */}
       {scenarioId === 'scenario2' && !rawEditMode && (
-        <div className="flex items-center justify-between gap-2 rounded border border-[#FFB300]/35 bg-[#FFB300]/10 px-2.5 py-1.5 text-[11px]">
+        <div className="flex items-center justify-between gap-2 rounded border border-[#FFB300]/35 bg-[#FFB300]/10 px-2.5 py-1.5 text-[10.5px]">
           <span className="text-[#FDE68A]">
-            Click any air-move line below to switch <code className="font-mono font-bold">FINE → CNT65</code> &amp; beat 6.5s takt.
+            Tap an air move below to tune <code className="font-mono font-bold">CNT</code> &amp; beat 6.5s.
           </span>
           <button
             type="button"
             onClick={applyRecommendedCntPreset}
-            className="flex shrink-0 items-center gap-1 rounded border border-[#FFB300]/50 bg-[#FFB300]/20 px-2 py-0.5 font-mono text-[10px] font-bold text-[#FFB300] hover:bg-[#FFB300]/30"
+            className="flex min-h-[30px] shrink-0 items-center gap-1 rounded border border-[#FFB300]/50 bg-[#FFB300]/20 px-2 font-mono text-[10px] font-bold text-[#FFB300]"
           >
             <Sparkles className="h-3 w-3" />
-            AUTO-TUNE CNT65
+            TUNE CNT65
           </button>
         </div>
       )}
 
-      {/* Main Code Pane: Either Raw Editor or Interactive Line-by-Line Monitor */}
+      {/* Main Code Area */}
       {rawEditMode ? (
         <div className="flex min-h-0 flex-1 flex-col gap-1.5">
+          {/* text-base on mobile prevents iOS Safari auto-zoom on focus */}
           <textarea
             value={draftText}
             onChange={(e) => setDraftText(e.target.value)}
             spellCheck={false}
-            className="hmi-recessed min-h-0 flex-1 resize-none rounded-md p-2.5 font-mono text-[11px] leading-relaxed text-[#E6EDF3] outline-none focus:border-[#00E5FF]"
+            className="hmi-recessed min-h-0 flex-1 resize-none rounded-md p-2.5 font-mono text-base leading-relaxed text-[#E6EDF3] outline-none focus:border-[#00E5FF] lg:text-[11px]"
           />
           {parseErrors.length > 0 && (
             <div className="rounded border border-[#FF1744]/50 bg-[#2A0E15] p-2 font-mono text-[10px] text-[#FCA5A5]">
@@ -221,18 +219,18 @@ export function MultiOemCodePanel() {
             </div>
           )}
           <div className="flex items-center justify-between text-[10px] text-[#8B949E]">
-            <span>Supports FANUC TP, ABB RAPID, &amp; KUKA KRL syntax.</span>
+            <span>FANUC TP, ABB RAPID, &amp; KUKA KRL supported</span>
             <button
               type="button"
               onClick={() => setRawEditMode(false)}
-              className="font-mono text-[#94A3B8] hover:text-[#E6EDF3]"
+              className="min-h-[30px] px-2 font-mono text-[#94A3B8] hover:text-[#E6EDF3]"
             >
               CANCEL
             </button>
           </div>
         </div>
       ) : (
-        <div className="hmi-recessed min-h-0 flex-1 overflow-y-auto rounded-md p-2 font-mono text-[11px]">
+        <div className="hmi-recessed min-h-0 flex-1 overflow-y-auto rounded-md p-1.5 font-mono text-[11px] lg:p-2">
           {header.map((h, i) => (
             <div key={`h_${i}`} className="px-2 py-0.5 text-[#586377]">
               {h}
@@ -250,7 +248,7 @@ export function MultiOemCodePanel() {
               <div
                 key={inst.id}
                 onClick={() => setSelectedLineIdx(idx)}
-                className={`group flex cursor-pointer items-center justify-between gap-2 rounded px-2 py-1 transition-colors ${
+                className={`flex min-h-[34px] cursor-pointer items-center justify-between gap-2 rounded px-2 py-1 transition-colors lg:min-h-[26px] ${
                   isExecLine
                     ? 'border-l-2 border-[#00E5FF] bg-[#00E5FF]/15 text-[#00E5FF]'
                     : isSelected
@@ -289,7 +287,7 @@ export function MultiOemCodePanel() {
         </div>
       )}
 
-      {/* Selected Line Inline Parameter Tuner + 5-OEM Syntax Equivalence Inspector */}
+      {/* Selected Line Inline Parameter Tuner (Thumb-Friendly) + Multi-OEM Peek */}
       {!rawEditMode && selectedInst && (
         <div className="hmi-recessed shrink-0 rounded-md p-2.5">
           {(selectedInst.type === 'MOVE_J' || selectedInst.type === 'MOVE_L') && (
@@ -297,9 +295,9 @@ export function MultiOemCodePanel() {
               <div className="mb-1.5 flex items-center justify-between font-mono text-[10px]">
                 <span className="flex items-center gap-1 font-bold text-[#00E5FF]">
                   <Sliders className="h-3 w-3" />
-                  LINE {clampedSelIdx + 1} QUICK TUNE
+                  LINE {clampedSelIdx + 1} TUNE
                 </span>
-                <div className="flex items-center gap-1">
+                <div className="flex items-center gap-1.5">
                   <button
                     type="button"
                     onClick={() =>
@@ -317,7 +315,7 @@ export function MultiOemCodePanel() {
                           : old,
                       )
                     }
-                    className={`rounded border px-2 py-0.5 font-bold ${
+                    className={`min-h-[30px] rounded border px-2.5 font-bold ${
                       selectedInst.type === 'MOVE_J'
                         ? 'border-[#00E676] bg-[#00E676]/20 text-[#00E676]'
                         : 'border-[#2A303C] bg-[#181C24] text-[#8B949E]'
@@ -342,7 +340,7 @@ export function MultiOemCodePanel() {
                           : old,
                       )
                     }
-                    className={`rounded border px-2 py-0.5 font-bold ${
+                    className={`min-h-[30px] rounded border px-2.5 font-bold ${
                       selectedInst.type === 'MOVE_L'
                         ? 'border-[#00E5FF] bg-[#00E5FF]/20 text-[#00E5FF]'
                         : 'border-[#2A303C] bg-[#181C24] text-[#8B949E]'
@@ -353,7 +351,7 @@ export function MultiOemCodePanel() {
                 </div>
               </div>
 
-              <div className="flex items-center gap-2 font-mono text-[10px]">
+              <div className="flex items-center gap-2 font-mono text-[10.5px]">
                 <button
                   type="button"
                   onClick={() =>
@@ -363,7 +361,7 @@ export function MultiOemCodePanel() {
                         : old,
                     )
                   }
-                  className={`rounded border px-2 py-0.5 font-bold ${
+                  className={`min-h-[32px] rounded border px-2.5 font-bold ${
                     selectedInst.termination.kind === 'FINE'
                       ? 'border-[#00E5FF] bg-[#00E5FF]/15 text-[#00E5FF]'
                       : 'border-[#2A303C] bg-[#181C24] text-[#8B949E]'
@@ -371,7 +369,6 @@ export function MultiOemCodePanel() {
                 >
                   FINE
                 </button>
-                <span className="text-[#8B949E]">CNT</span>
                 <input
                   type="range"
                   min={0}
@@ -386,7 +383,7 @@ export function MultiOemCodePanel() {
                         : old,
                     )
                   }}
-                  className="h-1.5 flex-1 cursor-pointer accent-[#FFB300]"
+                  className="h-2 flex-1 cursor-pointer accent-[#FFB300]"
                   aria-label="CNT Corner Blend Value"
                 />
                 <span className="w-12 text-right font-bold text-[#FFB300] tabular-nums">
@@ -401,16 +398,13 @@ export function MultiOemCodePanel() {
           {/* Cross-OEM Live Equivalence Peek */}
           <div className="space-y-1 font-mono text-[9.5px]">
             <div className="font-bold tracking-wider text-[#64748B]">
-              MULTI-OEM SYNTAX EQUIVALENCE (LINE {clampedSelIdx + 1})
+              OEM EQUIVALENCE (LINE {clampedSelIdx + 1})
             </div>
             {OEM_DIALECTS.filter((o) => o.id !== dialect)
-              .slice(0, 3)
+              .slice(0, 2)
               .map((oem) => (
                 <div key={oem.id} className="flex items-center gap-2 truncate">
-                  <span
-                    className="w-14 shrink-0 font-bold"
-                    style={{ color: oem.accentColor }}
-                  >
+                  <span className="w-13 shrink-0 font-bold" style={{ color: oem.accentColor }}>
                     {oem.name}
                   </span>
                   <span className="truncate text-[#94A3B8]">
