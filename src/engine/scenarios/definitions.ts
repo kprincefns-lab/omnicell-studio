@@ -122,13 +122,13 @@ export const SCENARIOS: Record<ScenarioId, ScenarioDefinition> = {
       p: 0,
       r: 0,
     },
-    homeJoints: [0, 8, 12, 0, 70, 0],
+    homeJoints: [0, -4, -10, 0, 104, 0],
     initialPositions: {
       1: {
         id: 1,
         name: 'HOME',
         representation: 'JOINT',
-        joints: [0, 8, 12, 0, 70, 0],
+        joints: [0, -4, -10, 0, 104, 0],
       },
       2: {
         id: 2,
