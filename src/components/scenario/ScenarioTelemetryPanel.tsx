@@ -94,6 +94,12 @@ export function ScenarioTelemetryPanel() {
         return telemetry.faultsTriaged.includes('GRIPPER')
       case 'triage_collision':
         return telemetry.faultsTriaged.includes('COLLISION')
+      case 'ft_swap_tool':
+        return telemetry.freeTeachToolSwapped
+      case 'ft_record_points':
+        return telemetry.freeTeachPointsRecorded >= 3
+      case 'ft_run_program':
+        return telemetry.completedCycles >= 1
       default:
         return false
     }

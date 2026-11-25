@@ -7,9 +7,11 @@ import { planProgramPreview, type ProgramPathPreview } from '../kinematics/plann
 import { evaluateSingularity } from '../kinematics/singularity'
 import { computeThreePointTcp, type TcpCalibrationResult, type TcpCalibrationSample } from '../kinematics/tcpCalibration'
 import {
+  TOOL_PRESETS,
   type CartesianPose,
   type ControllerMode,
   type CoordinateFrameMode,
+  type EndEffectorType,
   type ExecutionMode,
   type FKResult,
   type JointAngles,
@@ -108,6 +110,8 @@ function createInitialScenarioTelemetry(): MissionTelemetry {
     dcsVerifiedStop: false,
     singularityResolved: false,
     faultsTriaged: [],
+    freeTeachToolSwapped: false,
+    freeTeachPointsRecorded: 0,
   }
 }
 
@@ -272,6 +276,14 @@ export interface RobotStoreState {
   injectCncDoorCollisionFault: () => void
   restoreCncDoorInterlock: () => void
   randomizeBillet: () => void
+
+  // Free-Teach Sandbox & Swappable Tool Heads
+  swapToolHead: (type: EndEffectorType) => void
+  recordFreeTeachWaypoint: (moveType: 'MOVE_J' | 'MOVE_L', useCnt?: boolean) => void
+  appendFreeTeachToolAction: (activate: boolean) => void
+  appendFreeTeachWait: (seconds: number) => void
+  undoLastFreeTeachInstruction: () => void
+  clearFreeTeachProgram: () => void
 
   // Internal sync from runtime loop
   syncHudFromRuntime: () => void
@@ -455,6 +467,7 @@ export const useRobotStore = create<RobotStoreState>((set, get) => ({
     scenario2: createInitialScenarioTelemetry(),
     scenario3: createInitialScenarioTelemetry(),
     scenario4: createInitialScenarioTelemetry(),
+    freeteach: createInitialScenarioTelemetry(),
   },
 
   setWorkspace: (tab) => set({ activeWorkspace: tab }),
@@ -493,8 +506,9 @@ export const useRobotStore = create<RobotStoreState>((set, get) => ({
 
     useFieldbusStore.getState().resetFieldbus({ di: sc.initialFieldbusDI })
 
-    const nextMode: ControllerMode = id === 'scenario1' ? 'T1' : 'AUTO'
-    const nextDockTab: DockTab = id === 'scenario1' ? 'PENDANT' : id === 'scenario2' ? 'CODE' : 'SCENARIO'
+    const nextMode: ControllerMode = id === 'scenario1' || id === 'freeteach' ? 'T1' : 'AUTO'
+    const nextDockTab: DockTab =
+      id === 'scenario1' || id === 'freeteach' ? 'PENDANT' : id === 'scenario2' ? 'CODE' : 'SCENARIO'
     const zones = sc.initialSafetyZones.map((z) => ({ ...z }))
     const preview = planProgramPreview(
       sc.initialInstructions,
@@ -1010,6 +1024,112 @@ export const useRobotStore = create<RobotStoreState>((set, get) => ({
     }
     useFieldbusStore.getState().setDI(1, true, 'PLC_SIM')
     useFieldbusStore.getState().setDI(10, false, 'VISION')
+  },
+
+  swapToolHead: (type) => {
+    const st = get()
+    const nextTool = { ...TOOL_PRESETS[type] }
+    robotRuntime.fk = computeFK(robotRuntime.joints, nextTool, st.userFrame)
+    useFieldbusStore.getState().setDO(9, false, 'ROBOT')
+    set({ tool: nextTool })
+    st.updateTelemetry((p) => ({ ...p, freeTeachToolSwapped: true }))
+    st.recomputePathPreview()
+    st.syncHudFromRuntime()
+  },
+
+  recordFreeTeachWaypoint: (moveType, useCnt = false) => {
+    const st = get()
+    const existingIds = Object.keys(st.positions).map(Number)
+    const nextId = existingIds.length > 0 ? Math.max(...existingIds) + 1 : 1
+    const jointsSnapshot = [...robotRuntime.joints] as JointAngles
+    const poseSnapshot = { ...robotRuntime.fk.tcpWorldPose }
+
+    const nextPositions = {
+      ...st.positions,
+      [nextId]: {
+        id: nextId,
+        name: `PT_${nextId}`,
+        representation: 'JOINT' as const,
+        joints: jointsSnapshot,
+        cartesian: poseSnapshot,
+      },
+    }
+
+    const newInst: ProgramInstruction =
+      moveType === 'MOVE_J'
+        ? {
+            id: `ft_m_${Date.now()}_${nextId}`,
+            type: 'MOVE_J',
+            targetId: nextId,
+            speedPercent: 80,
+            termination: useCnt ? { kind: 'CNT', value: 50 } : { kind: 'FINE' },
+          }
+        : {
+            id: `ft_m_${Date.now()}_${nextId}`,
+            type: 'MOVE_L',
+            targetId: nextId,
+            speedMmPerSec: 600,
+            termination: useCnt ? { kind: 'CNT', value: 40 } : { kind: 'FINE' },
+          }
+
+    set({
+      positions: nextPositions,
+      instructions: [...st.instructions, newInst],
+    })
+    st.updateTelemetry((p) => ({
+      ...p,
+      freeTeachPointsRecorded: p.freeTeachPointsRecorded + 1,
+    }))
+    st.recomputePathPreview()
+  },
+
+  appendFreeTeachToolAction: (activate) => {
+    const st = get()
+    const isProcessTool = st.tool.endEffectorType === 'torch' || st.tool.endEffectorType === 'laser'
+    const newInst: ProgramInstruction = isProcessTool
+      ? {
+          id: `ft_t_${Date.now()}`,
+          type: 'SET_DO',
+          index: 9,
+          value: activate,
+        }
+      : {
+          id: `ft_g_${Date.now()}`,
+          type: 'CALL_GRIPPER',
+          action: activate ? 'CLOSE' : 'OPEN',
+        }
+    set({ instructions: [...st.instructions, newInst] })
+    st.recomputePathPreview()
+  },
+
+  appendFreeTeachWait: (seconds) => {
+    const st = get()
+    const newInst: ProgramInstruction = {
+      id: `ft_w_${Date.now()}`,
+      type: 'WAIT_TIME',
+      seconds,
+    }
+    set({ instructions: [...st.instructions, newInst] })
+    st.recomputePathPreview()
+  },
+
+  undoLastFreeTeachInstruction: () => {
+    const st = get()
+    if (st.instructions.length <= 2) return
+    set({ instructions: st.instructions.slice(0, -1) })
+    st.recomputePathPreview()
+  },
+
+  clearFreeTeachProgram: () => {
+    const st = get()
+    const sc = SCENARIOS.freeteach
+    st.stopProgram()
+    set({
+      positions: structuredClone(sc.initialPositions),
+      instructions: sc.initialInstructions.map((i) => ({ ...i })),
+      activeLineIndex: 0,
+    })
+    st.recomputePathPreview()
   },
 
   syncHudFromRuntime: () => {

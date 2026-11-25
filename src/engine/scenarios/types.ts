@@ -2,7 +2,7 @@ import type { DigitalBank } from '../fieldbus/types'
 import type { PositionRegister, ProgramInstruction } from '../dialects/types'
 import type { JointAngles, SafetyZone, ToolFrame, UserFrame, Vec3 } from '../kinematics/types'
 
-export type ScenarioId = 'scenario1' | 'scenario2' | 'scenario3' | 'scenario4'
+export type ScenarioId = 'scenario1' | 'scenario2' | 'scenario3' | 'scenario4' | 'freeteach'
 
 export interface MissionObjective {
   id: string
@@ -12,11 +12,11 @@ export interface MissionObjective {
 
 export interface ScenarioDefinition {
   id: ScenarioId
-  number: 1 | 2 | 3 | 4
+  number: 1 | 2 | 3 | 4 | 5
   shortTitle: string
   title: string
   subtitle: string
-  difficulty: 'FOUNDATION' | 'INTERMEDIATE' | 'ADVANCED' | 'EXPERT'
+  difficulty: 'FOUNDATION' | 'INTERMEDIATE' | 'ADVANCED' | 'EXPERT' | 'SANDBOX'
   taktTargetSec?: number
   tool: ToolFrame
   /** True physical tool tip offset (used in Scenario 1 so student calibrates from 0,0,0 to match real torch) */
@@ -71,4 +71,6 @@ export interface MissionTelemetry {
   dcsVerifiedStop: boolean
   singularityResolved: boolean
   faultsTriaged: string[]
+  freeTeachToolSwapped: boolean
+  freeTeachPointsRecorded: number
 }

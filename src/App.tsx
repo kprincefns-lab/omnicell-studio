@@ -4,7 +4,7 @@ import { MultiOemCodePanel } from './components/code/MultiOemCodePanel'
 import { FieldbusControlDeck, FieldbusStrip } from './components/fieldbus/FieldbusStrip'
 import { TopHeaderBar } from './components/layout/TopHeaderBar'
 import { TeachPendantPanel } from './components/pendant/TeachPendantPanel'
-import { PlcLabPlaceholder } from './components/plc/PlcLabPlaceholder'
+import { PlcLadderWorkspace } from './components/plc/PlcLadderWorkspace'
 import { WorkcellViewport, type MobileViewportSize } from './components/scene/WorkcellViewport'
 import { ScenarioTelemetryPanel } from './components/scenario/ScenarioTelemetryPanel'
 import { useRobotStore, type DockTab } from './engine/store/robotStore'
@@ -53,7 +53,7 @@ export function App() {
       {/* Main Workspace Area */}
       <main className="min-h-0 flex-1 overflow-hidden">
         {activeWorkspace === 'PLC' ? (
-          <PlcLabPlaceholder />
+          <PlcLadderWorkspace />
         ) : (
           <div className="flex h-full w-full flex-col lg:flex-row">
             {/* 3D Workcell Viewport: Resizable on Mobile, 65% Left on Desktop */}

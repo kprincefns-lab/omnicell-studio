@@ -464,6 +464,68 @@ export const SCENARIOS: Record<ScenarioId, ScenarioDefinition> = {
       },
     ],
   },
+
+  freeteach: {
+    id: 'freeteach',
+    number: 5,
+    shortTitle: 'Free Teach Sandbox',
+    title: 'Free-Teach Sandbox & Tool Head Playground',
+    subtitle: 'Swap tool heads freely, jog anywhere in the open cell, record custom J/L waypoints + tool commands, and run them from the Pendant or PLC Ladder Logic.',
+    difficulty: 'SANDBOX',
+    tool: {
+      id: 10,
+      name: 'UTOOL[10] Parallel Gripper',
+      x: 0,
+      y: 0,
+      z: 195,
+      w: 0,
+      p: 0,
+      r: 0,
+      endEffectorType: 'gripper',
+    },
+    userFrame: {
+      id: 0,
+      name: 'UFRAME[0] World',
+      x: 0,
+      y: 0,
+      z: 0,
+      w: 0,
+      p: 0,
+      r: 0,
+    },
+    homeJoints: [0, -4, -10, 0, 104, 0],
+    initialPositions: {
+      1: {
+        id: 1,
+        name: 'HOME_START',
+        representation: 'JOINT',
+        joints: [0, -4, -10, 0, 104, 0],
+      },
+    },
+    initialProgramName: 'FREE_TEACH_01',
+    initialInstructions: [
+      { id: 'ft_1', type: 'COMMENT', text: 'FREE TEACH: JOG & TAP RECORD J/L BELOW TO BUILD YOUR PROGRAM' },
+      { id: 'ft_2', type: 'MOVE_J', targetId: 1, speedPercent: 80, termination: { kind: 'FINE' } },
+    ],
+    initialSafetyZones: [],
+    objectives: [
+      {
+        id: 'ft_swap_tool',
+        label: 'Swap End-of-Arm Tool Head',
+        description: 'Hot-swap between Parallel Gripper, MIG Torch, 4-Cup Vacuum, and Fiber Laser head.',
+      },
+      {
+        id: 'ft_record_points',
+        label: 'Record Custom Waypoints (3+ Points)',
+        description: 'Jog the robot in T1 mode and tap RECORD J or RECORD L to teach your own routine.',
+      },
+      {
+        id: 'ft_run_program',
+        label: 'Execute Your Custom Free-Teach Program',
+        description: 'Press RUN (or trigger via PLC Ladder Logic DI[7]) to watch your taught path play back in 3D.',
+      },
+    ],
+  },
 }
 
 export const SCENARIO_LIST: readonly ScenarioDefinition[] = [
@@ -471,4 +533,5 @@ export const SCENARIO_LIST: readonly ScenarioDefinition[] = [
   SCENARIOS.scenario2,
   SCENARIOS.scenario3,
   SCENARIOS.scenario4,
+  SCENARIOS.freeteach,
 ]

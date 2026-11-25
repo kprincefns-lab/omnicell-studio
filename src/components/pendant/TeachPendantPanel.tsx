@@ -2,21 +2,27 @@ import { useEffect, useState, type PointerEvent } from 'react'
 import {
   ChevronDown,
   ChevronUp,
+  Clock,
   Crosshair,
   Hand,
   Home,
   Pause,
   Play,
+  Plus,
+  Power,
   RotateCcw,
   SkipForward,
   Square,
   Target,
   Trash2,
+  Undo2,
+  Wrench,
 } from 'lucide-react'
 import {
   OMNI_ROBOT_SPEC,
   type ControllerMode,
   type CoordinateFrameMode,
+  type EndEffectorType,
 } from '../../engine/kinematics/types'
 import { clearRuntimeJog, setRuntimeJogAxis, useRobotStore } from '../../engine/store/robotStore'
 
@@ -67,6 +73,14 @@ export function TeachPendantPanel() {
   const holdProgram = useRobotStore((s) => s.holdProgram)
   const stopProgram = useRobotStore((s) => s.stopProgram)
   const returnHome = useRobotStore((s) => s.returnHome)
+  const instructions = useRobotStore((s) => s.instructions)
+  const swapToolHead = useRobotStore((s) => s.swapToolHead)
+  const recordFreeTeachWaypoint = useRobotStore((s) => s.recordFreeTeachWaypoint)
+  const appendFreeTeachToolAction = useRobotStore((s) => s.appendFreeTeachToolAction)
+  const appendFreeTeachWait = useRobotStore((s) => s.appendFreeTeachWait)
+  const undoLastFreeTeachInstruction = useRobotStore((s) => s.undoLastFreeTeachInstruction)
+  const clearFreeTeachProgram = useRobotStore((s) => s.clearFreeTeachProgram)
+
   const recordTcpSample = useRobotStore((s) => s.recordTcpSample)
   const clearTcpSamples = useRobotStore((s) => s.clearTcpSamples)
   const solveAndApplyTcp = useRobotStore((s) => s.solveAndApplyTcp)
@@ -368,7 +382,122 @@ export function TeachPendantPanel() {
         </div>
       </div>
 
-      {/* Row 3: Scenario 1 Dedicated 3-Point Sphere-Fit TCP Calibration Console */}
+      {/* Row 3A: Free-Teach Sandbox Tool Head Switcher & Custom Waypoint Recorder */}
+      {scenarioId === 'freeteach' && (
+        <div className="rounded-md border border-[#00E676]/40 bg-[#101C18] p-2.5">
+          <div className="mb-2 flex items-center justify-between">
+            <div className="flex items-center gap-1.5">
+              <Wrench className="h-3.5 w-3.5 text-[#00E676]" />
+              <span className="font-mono text-[10.5px] font-bold text-[#00E676]">
+                FREE TEACH · TOOL HEAD &amp; RECORDER
+              </span>
+            </div>
+            <span className="rounded bg-[#00E676]/15 px-1.5 py-0.5 font-mono text-[9.5px] font-bold text-[#00E676] tabular-nums">
+              {Math.max(0, instructions.length - 1)} STEPS
+            </span>
+          </div>
+
+          {/* 4 Swappable End-of-Arm Tool Heads */}
+          <div className="mb-2 grid grid-cols-4 gap-1">
+            {(
+              [
+                ['gripper', 'Gripper'],
+                ['torch', 'MIG Torch'],
+                ['vacuum', 'Vacuum'],
+                ['laser', 'Laser'],
+              ] as ReadonlyArray<[EndEffectorType, string]>
+            ).map(([tKey, tLabel]) => {
+              const active = tool.endEffectorType === tKey
+              return (
+                <button
+                  key={tKey}
+                  type="button"
+                  onClick={() => swapToolHead(tKey)}
+                  className={`min-h-[34px] rounded border font-mono text-[10px] font-bold transition-colors ${
+                    active
+                      ? 'border-[#00E5FF] bg-[#00E5FF]/18 text-[#00E5FF]'
+                      : 'border-[#273432] bg-[#141A1D] text-[#94A3B8] hover:text-[#E6EDF3]'
+                  }`}
+                >
+                  {tLabel}
+                </button>
+              )
+            })}
+          </div>
+
+          {/* Record Waypoints (J / L) */}
+          <div className="mb-1.5 grid grid-cols-2 gap-1.5">
+            <button
+              type="button"
+              onClick={() => recordFreeTeachWaypoint('MOVE_J', true)}
+              className="flex min-h-[40px] items-center justify-center gap-1 rounded border border-[#00E5FF]/55 bg-[#00E5FF]/15 font-mono text-[10.5px] font-bold text-[#00E5FF] hover:bg-[#00E5FF]/25"
+            >
+              <Plus className="h-3.5 w-3.5" />
+              REC JOINT (J)
+            </button>
+            <button
+              type="button"
+              onClick={() => recordFreeTeachWaypoint('MOVE_L', false)}
+              className="flex min-h-[40px] items-center justify-center gap-1 rounded border border-[#00E676]/55 bg-[#00E676]/15 font-mono text-[10.5px] font-bold text-[#00E676] hover:bg-[#00E676]/25"
+            >
+              <Plus className="h-3.5 w-3.5" />
+              REC LINEAR (L)
+            </button>
+          </div>
+
+          {/* Tool Trigger + Wait + Undo + Clear */}
+          <div className="grid grid-cols-5 gap-1">
+            <button
+              type="button"
+              onClick={() => appendFreeTeachToolAction(true)}
+              className="flex min-h-[34px] items-center justify-center gap-1 rounded border border-[#FFB300]/45 bg-[#FFB300]/12 font-mono text-[9.5px] font-bold text-[#FFB300]"
+              title="Record Tool Activate (Grip Close / Vacuum ON / Arc or Laser ON)"
+            >
+              <Power className="h-3 w-3" />
+              ON
+            </button>
+            <button
+              type="button"
+              onClick={() => appendFreeTeachToolAction(false)}
+              className="flex min-h-[34px] items-center justify-center gap-1 rounded border border-[#384152] bg-[#19202B] font-mono text-[9.5px] font-bold text-[#CBD5E1]"
+              title="Record Tool Deactivate (Grip Open / Vacuum OFF / Arc or Laser OFF)"
+            >
+              <Power className="h-3 w-3" />
+              OFF
+            </button>
+            <button
+              type="button"
+              onClick={() => appendFreeTeachWait(0.5)}
+              className="flex min-h-[34px] items-center justify-center gap-1 rounded border border-[#384152] bg-[#19202B] font-mono text-[9.5px] font-bold text-[#CBD5E1]"
+              title="Insert 0.5s Wait"
+            >
+              <Clock className="h-3 w-3" />
+              0.5s
+            </button>
+            <button
+              type="button"
+              onClick={undoLastFreeTeachInstruction}
+              title="Undo Last Recorded Step"
+              className="flex min-h-[34px] items-center justify-center rounded border border-[#384152] bg-[#19202B] text-[#CBD5E1] hover:text-[#FFB300]"
+            >
+              <Undo2 className="h-3.5 w-3.5" />
+            </button>
+            <button
+              type="button"
+              onClick={clearFreeTeachProgram}
+              title="Clear All Taught Waypoints"
+              className="flex min-h-[34px] items-center justify-center rounded border border-[#FF1744]/40 bg-[#251319] text-[#FF6B81]"
+            >
+              <Trash2 className="h-3.5 w-3.5" />
+            </button>
+          </div>
+          <p className="mt-1.5 text-[10px] leading-snug text-[#94A3B8]">
+            Jog to any pose → tap <strong className="text-[#00E5FF]">REC J/L</strong> → press <strong className="text-[#00E676]">RUN</strong> (or trigger via PLC Ladder Logic!).
+          </p>
+        </div>
+      )}
+
+      {/* Row 3B: Scenario 1 Dedicated 3-Point Sphere-Fit TCP Calibration Console */}
       {scenarioId === 'scenario1' && (
         <div className="rounded-md border border-[#00E5FF]/35 bg-[#111922] p-2.5">
           <div className="mb-1.5 flex items-center justify-between">
@@ -386,6 +515,12 @@ export function TeachPendantPanel() {
               PIN Δ: {hudPhysicalTipErrorMm.toFixed(2)} mm
             </span>
           </div>
+
+          {hudPhysicalTipErrorMm > 5 && (
+            <div className="mb-2 rounded border border-[#FFB300]/35 bg-[#FFB300]/10 px-2 py-1 font-mono text-[9.5px] text-[#FDE68A]">
+              Tip: All 3 points must touch the cyan pin tip (PIN Δ &lt; 1.5 mm) from 3 angles. Use Approaches #1–#3 or try Scenario 05 Free Teach for custom playback!
+            </div>
+          )}
 
           <div className="mb-2 grid grid-cols-3 gap-1.5">
             {([1, 2, 3] as const).map((n) => (

@@ -7,7 +7,10 @@ import { checkSafetyZones } from '../kinematics/safetyZones'
 import { evaluateSingularity } from '../kinematics/singularity'
 import { OMNI_ROBOT_SPEC, type JointAngles, type ToolFrame, type Vec3 } from '../kinematics/types'
 import { SCENARIOS } from '../scenarios/definitions'
+import { usePlcStore } from '../plc/plcStore'
 import { robotRuntime, useRobotStore } from '../store/robotStore'
+
+let plcScanAccumSec = 0
 
 function pushTrailPoint(pt: Vec3): void {
   const trail = robotRuntime.tcpTrail
@@ -40,13 +43,25 @@ function getPhysicalTorchTipWorld(joints: JointAngles): Vec3 {
 /**
  * Deterministic 60Hz simulation tick driven inside R3F useFrame().
  * Updates mutable `robotRuntime` without triggering React re-renders per frame;
- * syncs UI telemetry at ~12 Hz.
+ * syncs UI telemetry at ~12 Hz and runs PLC Ladder Logic scan at 20 Hz when armed.
  */
 export function tickSimulation(rawDeltaSec: number): void {
   const dt = Math.min(rawDeltaSec, 0.05) // Clamp dt on tab background resume
   const store = useRobotStore.getState()
   const fieldbus = useFieldbusStore.getState()
   const prevJoints: JointAngles = [...robotRuntime.joints] as JointAngles
+
+  // 0. Live PLC Ladder Logic Scan Engine (20 Hz fixed step)
+  const plc = usePlcStore.getState()
+  if (plc.plcRunning) {
+    plcScanAccumSec += dt
+    if (plcScanAccumSec >= 0.05) {
+      plc.stepPlcScan(plcScanAccumSec)
+      plcScanAccumSec = 0
+    }
+  } else {
+    plcScanAccumSec = 0
+  }
 
   // 1. 1Hz Fieldbus Watchdog Heartbeat (DI[16] & DO[16])
   robotRuntime.heartbeatAccumSec += dt

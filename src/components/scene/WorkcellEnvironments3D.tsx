@@ -423,6 +423,41 @@ function SafetyZonesOverlay3D() {
   )
 }
 
+/** Scenario 5: Open Free-Teach Sandbox Workbench with 3 target stations & open reach */
+function FreeTeachEnvironment() {
+  return (
+    <group>
+      {/* Low Modular Industrial Workbench (Z top = 0.44m, plenty of vertical reach) */}
+      <mesh position={[1.05, 0, 0.21]} castShadow receiveShadow>
+        <boxGeometry args={[0.78, 1.45, 0.42]} />
+        <meshStandardMaterial color="#1F2530" metalness={0.5} roughness={0.48} />
+      </mesh>
+      <mesh position={[1.05, 0, 0.43]} receiveShadow>
+        <boxGeometry args={[0.8, 1.48, 0.022]} />
+        <meshStandardMaterial color="#313B4D" metalness={0.68} roughness={0.32} />
+        <Edges color="#475569" />
+      </mesh>
+
+      {/* 3 Reference Target Pads (Station A -Y, Center Weld/Laser Plate, Station B +Y) */}
+      <mesh position={[1.05, -0.46, 0.448]}>
+        <boxGeometry args={[0.24, 0.24, 0.014]} />
+        <meshStandardMaterial color="#253244" metalness={0.7} roughness={0.3} />
+        <Edges color="#00E5FF" />
+      </mesh>
+      <mesh position={[1.05, 0, 0.45]}>
+        <boxGeometry args={[0.3, 0.36, 0.018]} />
+        <meshStandardMaterial color="#2C3546" metalness={0.75} roughness={0.28} />
+        <Edges color="#FFB300" />
+      </mesh>
+      <mesh position={[1.05, 0.46, 0.448]}>
+        <boxGeometry args={[0.24, 0.24, 0.014]} />
+        <meshStandardMaterial color="#253244" metalness={0.7} roughness={0.3} />
+        <Edges color="#00E676" />
+      </mesh>
+    </group>
+  )
+}
+
 export function WorkcellEnvironments3D() {
   const scenarioId = useRobotStore((s) => s.scenarioId)
 
@@ -433,6 +468,7 @@ export function WorkcellEnvironments3D() {
       {scenarioId === 'scenario2' && <Scenario2Environment />}
       {scenarioId === 'scenario3' && <Scenario3Environment />}
       {scenarioId === 'scenario4' && <Scenario4Environment />}
+      {scenarioId === 'freeteach' && <FreeTeachEnvironment />}
       <SafetyZonesOverlay3D />
     </group>
   )

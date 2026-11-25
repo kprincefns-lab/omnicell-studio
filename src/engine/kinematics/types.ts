@@ -20,6 +20,8 @@ export interface CartesianPose {
   r: number
 }
 
+export type EndEffectorType = 'gripper' | 'torch' | 'vacuum' | 'laser'
+
 export interface ToolFrame {
   id: number
   name: string
@@ -31,7 +33,54 @@ export interface ToolFrame {
   w: number
   p: number
   r: number
-  endEffectorType: 'torch' | 'gripper'
+  endEffectorType: EndEffectorType
+}
+
+export const TOOL_PRESETS: Record<EndEffectorType, ToolFrame> = {
+  gripper: {
+    id: 10,
+    name: 'UTOOL[10] Parallel Gripper',
+    x: 0,
+    y: 0,
+    z: 195,
+    w: 0,
+    p: 0,
+    r: 0,
+    endEffectorType: 'gripper',
+  },
+  torch: {
+    id: 11,
+    name: 'UTOOL[11] MIG Welding Torch',
+    x: 70,
+    y: 0,
+    z: 230,
+    w: 0,
+    p: 0,
+    r: 0,
+    endEffectorType: 'torch',
+  },
+  vacuum: {
+    id: 12,
+    name: 'UTOOL[12] 4-Cup Vacuum EOAT',
+    x: 0,
+    y: 0,
+    z: 180,
+    w: 0,
+    p: 0,
+    r: 0,
+    endEffectorType: 'vacuum',
+  },
+  laser: {
+    id: 13,
+    name: 'UTOOL[13] Fiber Laser Head',
+    x: 0,
+    y: 0,
+    z: 205,
+    w: 0,
+    p: 0,
+    r: 0,
+    endEffectorType: 'laser',
+  },
 }
 
 export interface UserFrame {

@@ -64,9 +64,9 @@ export function TopHeaderBar() {
             >
               <Cpu className="h-3 w-3 lg:h-3.5 lg:w-3.5" />
               <span className="lg:hidden">PLC</span>
-              <span className="hidden lg:inline">PLC &amp; Controls Lab</span>
-              <span className="hidden rounded bg-[#FFB300]/15 px-1 font-mono text-[9px] text-[#FFB300] xl:inline">
-                PHASE 3
+              <span className="hidden lg:inline">PLC &amp; Ladder Lab</span>
+              <span className="hidden rounded bg-[#00E676]/15 px-1 font-mono text-[9px] text-[#00E676] xl:inline">
+                LADDER
               </span>
             </button>
           </nav>

@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef } from 'react'
 import { useFrame } from '@react-three/fiber'
 import * as THREE from 'three'
 import type { OemDialect } from '../../engine/dialects/types'
+import { useFieldbusStore } from '../../engine/fieldbus/fieldbusStore'
 import { DEG2RAD } from '../../engine/kinematics/math3d'
 import { OMNI_ROBOT_SPEC } from '../../engine/kinematics/types'
 import { tickSimulation } from '../../engine/runtime/simulationLoop'
@@ -254,8 +255,11 @@ export function RobotArm3D() {
     }
   })
 
+  const doBank = useFieldbusStore((s) => s.do)
   const tcpOffsetM: [number, number, number] = [tool.x * MM_TO_M, tool.y * MM_TO_M, tool.z * MM_TO_M]
-  const isAngledTorch = scenarioId === 'scenario1'
+  const isAngledTorch = scenarioId === 'scenario1' || scenarioId === 'freeteach'
+  const processToolActive = doBank[9]
+  const vacuumActive = doBank[1]
 
   return (
     <group>
@@ -368,8 +372,8 @@ export function RobotArm3D() {
                       <cylinderGeometry args={[0.058, 0.058, 0.016, 20]} />
                     </mesh>
 
-                    {/* Swappable End-Effector */}
-                    {tool.endEffectorType === 'torch' ? (
+                    {/* Swappable Industrial Tool Heads (Gripper | MIG Torch | 4-Cup Vacuum | Fiber Laser) */}
+                    {tool.endEffectorType === 'torch' && (
                       <group>
                         <mesh position={[0, 0, 0.04]} rotation={[Math.PI / 2, 0, 0]} material={mats.darkCast}>
                           <cylinderGeometry args={[0.036, 0.044, 0.065, 16]} />
@@ -388,8 +392,12 @@ export function RobotArm3D() {
                               </mesh>
                             </group>
                             <mesh position={[0.07, 0, 0.23]}>
-                              <sphereGeometry args={[0.005, 10, 10]} />
-                              <meshStandardMaterial color="#FFD600" emissive="#FFD600" emissiveIntensity={1.2} />
+                              <sphereGeometry args={[processToolActive ? 0.018 : 0.005, 12, 12]} />
+                              <meshStandardMaterial
+                                color={processToolActive ? '#7DF9FF' : '#FFD600'}
+                                emissive={processToolActive ? '#00E5FF' : '#FFD600'}
+                                emissiveIntensity={processToolActive ? 3.2 : 1.2}
+                              />
                             </mesh>
                           </group>
                         ) : (
@@ -403,7 +411,9 @@ export function RobotArm3D() {
                           </group>
                         )}
                       </group>
-                    ) : (
+                    )}
+
+                    {tool.endEffectorType === 'gripper' && (
                       <group>
                         <mesh position={[0, 0, 0.048]} castShadow material={mats.darkCast}>
                           <boxGeometry args={[0.078, 0.125, 0.078]} />
@@ -420,6 +430,70 @@ export function RobotArm3D() {
                         <mesh ref={jawRightRef} position={[0, -0.04, 0.148]} castShadow material={mats.chrome}>
                           <boxGeometry args={[0.028, 0.018, 0.096]} />
                         </mesh>
+                      </group>
+                    )}
+
+                    {tool.endEffectorType === 'vacuum' && (
+                      <group>
+                        {/* Vacuum Manifold Stem & Crossbar */}
+                        <mesh position={[0, 0, 0.055]} rotation={[Math.PI / 2, 0, 0]} castShadow material={mats.darkCast}>
+                          <cylinderGeometry args={[0.03, 0.036, 0.095, 16]} />
+                        </mesh>
+                        <mesh position={[0, 0, 0.115]} castShadow material={mats.chrome}>
+                          <boxGeometry args={[0.16, 0.16, 0.022]} />
+                        </mesh>
+                        {/* 4 Suction Bellows Cups */}
+                        {[
+                          [-0.058, -0.058],
+                          [0.058, -0.058],
+                          [-0.058, 0.058],
+                          [0.058, 0.058],
+                        ].map(([cx, cy], idx) => (
+                          <group key={`cup_${idx}`} position={[cx, cy, 0.15]}>
+                            <mesh rotation={[Math.PI / 2, 0, 0]} material={mats.darkCast}>
+                              <cylinderGeometry args={[0.012, 0.012, 0.045, 12]} />
+                            </mesh>
+                            <mesh position={[0, 0, 0.024]} rotation={[Math.PI / 2, 0, 0]}>
+                              <cylinderGeometry args={[0.024, 0.015, 0.016, 16]} />
+                              <meshStandardMaterial
+                                color={vacuumActive ? '#00E5FF' : '#334155'}
+                                emissive={vacuumActive ? '#00E5FF' : '#000000'}
+                                emissiveIntensity={vacuumActive ? 1.1 : 0}
+                                roughness={0.5}
+                              />
+                            </mesh>
+                          </group>
+                        ))}
+                      </group>
+                    )}
+
+                    {tool.endEffectorType === 'laser' && (
+                      <group>
+                        {/* Fiber Laser Optics Housing */}
+                        <mesh position={[0, 0, 0.065]} castShadow material={mats.darkCast}>
+                          <boxGeometry args={[0.082, 0.082, 0.115]} />
+                        </mesh>
+                        {/* Anodized Focusing Lens Barrel */}
+                        <mesh position={[0, 0, 0.155]} rotation={[Math.PI / 2, 0, 0]} material={mats.chrome}>
+                          <cylinderGeometry args={[0.024, 0.032, 0.075, 18]} />
+                        </mesh>
+                        {/* Copper Laser Nozzle */}
+                        <mesh position={[0, 0, 0.198]} rotation={[Math.PI / 2, 0, 0]} material={mats.copper}>
+                          <cylinderGeometry args={[0.006, 0.018, 0.022, 16]} />
+                        </mesh>
+                        {/* Live Laser Beam when DO[9] = ON */}
+                        {processToolActive && (
+                          <mesh position={[0, 0, 0.34]} rotation={[Math.PI / 2, 0, 0]}>
+                            <cylinderGeometry args={[0.0035, 0.0035, 0.27, 10]} />
+                            <meshStandardMaterial
+                              color="#00E676"
+                              emissive="#00E676"
+                              emissiveIntensity={3.0}
+                              transparent
+                              opacity={0.85}
+                            />
+                          </mesh>
+                        )}
                       </group>
                     )}
 
